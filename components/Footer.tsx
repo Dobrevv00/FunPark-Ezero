@@ -1,19 +1,23 @@
+const menuItems = [
+  { label: "Начало", href: "/" },
+  { label: "Събития", href: "/events" },
+  { label: "Контакти", href: "/contacts" },
+];
+
+const infoItems = [
+  { label: "Резервации", href: "#" },
+  { label: "Политика за поверителност", href: "#" },
+  { label: "Общи условия", href: "#" },
+];
+
 const columns = [
-  {
-    title: "Меню",
-    left: 522,
-    items: ["Начало", "Събития", "Контакти"],
-  },
-  {
-    title: "Информация",
-    left: 771,
-    items: ["Резервации", "Политика за поверителност", "Общи условия"],
-  },
+  { title: "Меню", left: 522, items: menuItems },
+  { title: "Информация", left: 771, items: infoItems },
 ];
 
 const mobileColumns = [
-  { title: "Меню", items: ["Начало", "Събития", "Контакти"] },
-  { title: "Информация", items: ["Резервации", "Общи условия"] },
+  { title: "Меню", items: menuItems },
+  { title: "Информация", items: [infoItems[0], infoItems[2]] },
 ];
 
 const contacts = [
@@ -85,12 +89,12 @@ export default function Footer() {
             </p>
             <ul className="mt-[8px] flex flex-col items-center gap-[10px]">
               {col.items.map((item) => (
-                <li key={item}>
+                <li key={item.label}>
                   <a
-                    href="#"
+                    href={item.href}
                     className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white"
                   >
-                    {item}
+                    {item.label}
                   </a>
                 </li>
               ))}
@@ -134,12 +138,12 @@ export default function Footer() {
             </p>
             <ul className="mt-[12px] flex flex-col gap-[12px]">
               {col.items.map((item) => (
-                <li key={item}>
+                <li key={item.label}>
                   <a
-                    href="#"
+                    href={item.href}
                     className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white"
                   >
-                    {item}
+                    {item.label}
                   </a>
                 </li>
               ))}

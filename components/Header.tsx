@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 const navLinks = [
   { label: "Начало", href: "/" },
   { label: "Събития", href: "/events" },
-  { label: "Контакти", href: "#" },
+  { label: "Контакти", href: "/contacts" },
 ];
 
 const socials = [
@@ -16,7 +16,7 @@ const socials = [
   { src: "/icons/instagram.svg", alt: "Instagram", className: "h-[22px] w-[22px]" },
 ];
 
-function Logo({ className }: { className: string }) {
+export function Logo({ className }: { className: string }) {
   return (
     <Link href="/" className={`relative block overflow-hidden ${className}`}>
       <span className="absolute inset-[2.67%_0_0_0]">
