@@ -16,21 +16,18 @@ const infoColumns = [
     iconClass: "h-[24px] w-[20px]",
     label: "Локация",
     lines: ["442 Architectural Blvd,", "Suite 900 New York, NY"],
-    pos: "lg:left-[205px] lg:w-[179px]",
   },
   {
     icon: "/icons/call-w.svg",
     iconClass: "size-[23px]",
     label: "Контакти",
     lines: ["inquiries@kavatsi.com", "+359 800 548 568"],
-    pos: "lg:left-[642px] lg:w-[165px]",
   },
   {
     icon: "/icons/schedule-w.svg",
     iconClass: "size-[31px]",
     label: "Работно време",
     lines: ["Mon — Fri: 09:00 - 18:00", "Sat: By Appointment Only"],
-    pos: "lg:left-[1101px] lg:w-[192px]",
   },
 ];
 
@@ -52,7 +49,7 @@ export default function ContactsPage() {
       <main className="overflow-x-clip bg-[#f5f5f7] pb-[86px]">
         {/* Херо */}
         <section className="relative pb-[24px] lg:h-[851px] lg:pb-0">
-          <div className="absolute inset-x-[16px] top-0 h-full rounded-[10px] bg-cream lg:left-[31px] lg:right-[32px] lg:top-[-19px] lg:h-[870px]" />
+          <div className="absolute inset-x-[16px] top-0 h-full rounded-[10px] bg-cream lg:left-[31px] lg:right-[32px] lg:h-[851px]" />
           <div className="relative flex flex-col items-center px-[24px] pt-[80px] text-center">
             <Badge>Контакти</Badge>
             <h1 className="mt-[40px] font-golos text-[36px] font-extrabold text-ink lg:text-[55px]">
@@ -85,12 +82,9 @@ export default function ContactsPage() {
             На разположение сме да отговорим на въпросите ти и да ти помогнем
             при избора на твоя нов дом.
           </p>
-          <div className="mt-[40px] flex flex-col items-center gap-[40px] lg:mt-0 lg:block lg:gap-0">
+          <div className="mt-[40px] flex flex-col items-center gap-[40px] lg:mt-[80px] lg:grid lg:grid-cols-3 lg:items-start lg:gap-0 lg:px-[100px]">
             {infoColumns.map((col) => (
-              <div
-                key={col.label}
-                className={`flex flex-col items-center lg:absolute lg:top-[240px] ${col.pos}`}
-              >
+              <div key={col.label} className="flex flex-col items-center">
                 <span className="flex size-[49px] items-center justify-center rounded-[10px] bg-gradient-to-t from-pine from-[92.5%] to-leaf to-[117.5%]">
                   <img src={col.icon} alt="" className={col.iconClass} />
                 </span>
