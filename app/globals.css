@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-forest: #13362f;
+  --color-pine: #17573b;
+  --color-leaf: #6a8e4e;
+  --color-sun: #f4c63f;
+  --color-cream: #faf7ee;
+  --color-offwhite: #fffefe;
+  --color-ink: #18181b;
+}
+
+@theme inline {
+  --font-golos: var(--font-golos-text);
+  --font-mulish: var(--font-mulish-sans);
+}
+
+body {
+  background-color: var(--color-offwhite);
+  color: var(--color-ink);
+}

@@ -1,0 +1,10 @@
+<svg preserveAspectRatio="none" width="100%" height="100%" overflow="visible" style="display: block;" viewBox="0 0 18.1958 18.1958" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="accessibility">
+<mask id="mask0_0_7" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="0" y="0" width="19" height="19">
+<rect id="Bounding box" width="18.1958" height="18.1958" fill="var(--fill-0, #D9D9D9)"/>
+</mask>
+<g mask="url(#mask0_0_7)">
+<path id="accessibility_2" d="M7.99699 3.41317C7.67566 3.08927 7.515 2.69991 7.515 2.24508C7.515 1.79024 7.67566 1.40088 7.99699 1.07698C8.31831 0.753087 8.70459 0.591139 9.15581 0.591139C9.60703 0.591139 9.99331 0.753087 10.3146 1.07698C10.636 1.40088 10.7966 1.79024 10.7966 2.24508C10.7966 2.69991 10.636 3.08927 10.3146 3.41317C9.99331 3.73707 9.60703 3.89902 9.15581 3.89902C8.70459 3.89902 8.31831 3.73707 7.99699 3.41317ZM6.69459 17.1305V6.37992H1.77216V4.72598H16.5395V6.37992H11.617V17.1305H9.97622V12.1687H8.3354V17.1305H6.69459Z" fill="var(--fill-0, #1C1B1F)" fill-opacity="0.8"/>
+</g>
+</g>
+</svg>
