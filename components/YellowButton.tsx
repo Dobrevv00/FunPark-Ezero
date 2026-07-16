@@ -21,7 +21,11 @@ export default function YellowButton({
 
   if (booking) {
     return (
-      <button type="button" className={`cursor-pointer ${classes}`} onClick={open}>
+      <button
+        type="button"
+        className={`cursor-pointer ${classes}`}
+        onClick={() => open()}
+      >
         {label}
       </button>
     );

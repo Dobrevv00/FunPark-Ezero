@@ -49,13 +49,3 @@ export function getMonthWeeks(year: number, month: number, today: Date): Day[][]
   return result;
 }
 
-const d = (day: number, state: DayState = "open"): Day => ({ day, state });
-
-/** Статичната решетка от дизайна — ползва се от резервационната карта на началната страница */
-export const weeks: Day[][] = [
-  [null, null, d(1, "past"), d(2, "past"), d(3, "past"), d(4, "past"), d(5, "closed")],
-  [d(6, "past"), d(7, "past"), d(8, "today"), d(9), d(10), d(11), d(12, "selected")],
-  [d(13), d(14), d(15), d(16), d(17), d(18), d(19, "closed")],
-  [d(20), d(21), d(22), d(23), d(24), d(25), d(26, "closed")],
-  [d(27), d(28), d(29), d(30), d(31), null, null],
-];

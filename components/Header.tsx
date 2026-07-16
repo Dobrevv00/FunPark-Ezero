@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useBookingModal } from "./BookingModal";
 
 const navLinks = [
   { label: "Начало", href: "/" },
@@ -16,9 +17,40 @@ const socials = [
   { src: "/icons/instagram.svg", alt: "Instagram", className: "h-[22px] w-[22px]" },
 ];
 
+type SearchEntry = {
+  title: string;
+  desc: string;
+  href?: string;
+  booking?: boolean;
+  keywords: string;
+};
+
+const searchIndex: SearchEntry[] = [
+  { title: "Начало", desc: "Главната страница на парка", href: "/", keywords: "home парк начална" },
+  { title: "Резервация", desc: "Резервирай дата, час и билети", booking: true, keywords: "резервирай резервирай сега календар час билети запази" },
+  { title: "Събития", desc: "Предстоящи събития в парка", href: "/events", keywords: "календар програма събитие" },
+  { title: "Лятно кино под звездите", desc: "Събитие · 15 юли", href: "/events", keywords: "кино филм вечер събитие" },
+  { title: "Приключенски уикенд", desc: "Събитие · 19 юли", href: "/events", keywords: "приключение игри уикенд събитие" },
+  { title: "DJ вечер край езерото", desc: "Събитие · 25 юли", href: "/events", keywords: "музика парти коктейли събитие" },
+  { title: "Контакти", desc: "Свържете се с нас", href: "/contacts", keywords: "телефон имейл адрес въпрос запитване форма" },
+  { title: "Ресторант", desc: "Вкусове от природата", href: "/", keywords: "храна меню езеро" },
+  { title: "Въжено съоръжение", desc: "Маршрути с различни нива на трудност", href: "/", keywords: "атракция катерене въжен парк" },
+];
+
+function searchFor(query: string): SearchEntry[] {
+  const q = query.trim().toLowerCase();
+  if (!q) return [];
+  return searchIndex.filter((e) =>
+    `${e.title} ${e.desc} ${e.keywords}`.toLowerCase().includes(q)
+  );
+}
+
 export function Logo({ className }: { className: string }) {
   return (
-    <Link href="/" className={`relative block overflow-hidden ${className}`}>
+    <Link
+      href="/"
+      className={`relative block overflow-hidden transition-transform duration-300 ease-out hover:scale-110 active:scale-95 active:duration-100 ${className}`}
+    >
       <span className="absolute inset-[2.67%_0_0_0]">
         <img src="/icons/logo-mark.svg" alt="Fun Park Ezero" className="size-full" />
       </span>
@@ -29,10 +61,72 @@ export function Logo({ className }: { className: string }) {
   );
 }
 
+function SearchResults({
+  results,
+  query,
+  onPick,
+}: {
+  results: SearchEntry[];
+  query: string;
+  onPick: (entry: SearchEntry) => void;
+}) {
+  return (
+    <div
+      className="flex flex-col gap-[2px] rounded-[10px] bg-white p-[6px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.15)]"
+      onMouseDown={(e) => e.preventDefault()}
+    >
+      {results.length === 0 ? (
+        <p className="px-[12px] py-[10px] text-[13px] text-[#545454]">
+          Няма резултати за „{query.trim()}&ldquo;
+        </p>
+      ) : (
+        results.map((r) => (
+          <button
+            key={r.title}
+            type="button"
+            className="cursor-pointer rounded-[8px] px-[12px] py-[8px] text-left transition-colors hover:bg-cream"
+            onClick={() => onPick(r)}
+          >
+            <span className="block text-[13.5px] font-semibold leading-[18px] text-ink">
+              {r.title}
+            </span>
+            <span className="block text-[12px] leading-[16px] text-[#545454]">
+              {r.desc}
+            </span>
+          </button>
+        ))
+      )}
+    </div>
+  );
+}
+
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [focused, setFocused] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { open: openBooking } = useBookingModal();
+
+  const results = searchFor(query);
+  const showResults = focused && query.trim() !== "";
+
+  const pick = (entry: SearchEntry) => {
+    setQuery("");
+    setFocused(false);
+    setSearchOpen(false);
+    if (entry.booking) openBooking();
+    else if (entry.href) router.push(entry.href);
+  };
+
+  const onSearchKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && results.length > 0) pick(results[0]);
+    if (e.key === "Escape") {
+      setQuery("");
+      (e.target as HTMLInputElement).blur();
+    }
+  };
 
   return (
     <header className="bg-offwhite">
@@ -71,8 +165,18 @@ export default function Header() {
               type="search"
               autoFocus
               placeholder="Потърси"
-              className="h-[40px] w-full rounded-[61px] border border-black/18 bg-[rgba(217,217,217,0.44)] px-[18px] text-[14px] text-ink outline-none placeholder:text-[#545454]"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
+              onKeyDown={onSearchKeyDown}
+              className="h-[40px] w-full rounded-[61px] border border-black/18 bg-[rgba(217,217,217,0.44)] px-[18px] text-[14px] text-ink outline-none transition-colors placeholder:text-[#545454] focus:border-forest focus:bg-white"
             />
+            {query.trim() !== "" && (
+              <div className="pt-[8px]">
+                <SearchResults results={results} query={query} onPick={pick} />
+              </div>
+            )}
           </form>
         )}
       </div>
@@ -145,22 +249,41 @@ export default function Header() {
         </nav>
 
         <div className="ml-auto flex items-center">
-          <button
-            type="button"
-            className="flex h-[33px] w-[171px] cursor-pointer items-center gap-[10px] rounded-[61px] border border-black/18 bg-[rgba(217,217,217,0.44)] px-[14px] transition-colors hover:bg-[rgba(217,217,217,0.75)]"
-          >
-            <span className="relative size-[14px] shrink-0">
-              <img src="/icons/search.svg" alt="" className="absolute inset-0 size-full" />
-              <img
-                src="/icons/search-handle.svg"
-                alt=""
-                className="absolute -bottom-[1px] -right-[2px] size-[5px]"
+          {/* Търсачка */}
+          <div className="relative">
+            <div
+              className={`flex h-[33px] w-[171px] items-center gap-[10px] rounded-[61px] border px-[14px] transition-all duration-200 ${
+                focused
+                  ? "w-[220px] border-forest bg-white shadow-[0px_4px_14px_0px_rgba(0,0,0,0.1)]"
+                  : "border-black/18 bg-[rgba(217,217,217,0.44)] hover:border-black/40 hover:bg-[rgba(217,217,217,0.75)] hover:shadow-[0px_4px_14px_0px_rgba(0,0,0,0.08)]"
+              }`}
+            >
+              <span className="relative size-[14px] shrink-0">
+                <img src="/icons/search.svg" alt="" className="absolute inset-0 size-full" />
+                <img
+                  src="/icons/search-handle.svg"
+                  alt=""
+                  className="absolute -bottom-[1px] -right-[2px] size-[5px]"
+                />
+              </span>
+              <input
+                type="search"
+                role="searchbox"
+                placeholder="Потърси"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                onKeyDown={onSearchKeyDown}
+                className="w-full bg-transparent text-[13.178px] tracking-[0.1318px] text-ink outline-none placeholder:text-[#545454]"
               />
-            </span>
-            <span className="text-[13.178px] leading-[1.3] tracking-[0.1318px] text-[#545454]">
-              Потърси
-            </span>
-          </button>
+            </div>
+            {showResults && (
+              <div className="absolute right-0 top-[41px] z-50 hidden w-[280px] lg:block">
+                <SearchResults results={results} query={query} onPick={pick} />
+              </div>
+            )}
+          </div>
 
           <div className="ml-[45px] flex items-center gap-[24px]">
             {socials.map((s) => (

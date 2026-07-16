@@ -1,6 +1,15 @@
+"use client";
+
+import { useMemo } from "react";
 import YellowButton from "./YellowButton";
 import Badge from "./Badge";
-import { weekdays, weeks, type DayState } from "./calendarData";
+import { useBookingModal } from "./BookingModal";
+import {
+  getMonthWeeks,
+  monthNames,
+  weekdays,
+  type DayState,
+} from "./calendarData";
 
 const steps = [
   { n: 1, label: "Избери дата", circleLeft: 684.31, labelLeft: 664 },
@@ -24,6 +33,11 @@ const dayColors: Record<DayState, string> = {
 };
 
 function Calendar({ mobile }: { mobile: boolean }) {
+  const { open } = useBookingModal();
+  const now = useMemo(() => new Date(), []);
+  const y = now.getFullYear();
+  const m = now.getMonth();
+  const weeksGrid = useMemo(() => getMonthWeeks(y, m, now), [y, m, now]);
   const cell = mobile ? "h-[31.26px] w-[36.944px]" : "h-[40.483px] w-[47.843px]";
   const round = mobile
     ? "size-[36.944px] border-[1.066px]"
@@ -38,7 +52,7 @@ function Calendar({ mobile }: { mobile: boolean }) {
             : "left-[25px] top-[25px] text-[14.721px]"
         }`}
       >
-        Юли 2026
+        {monthNames[m]} {y}
       </p>
       <div
         className={`absolute flex justify-between ${
@@ -63,24 +77,30 @@ function Calendar({ mobile }: { mobile: boolean }) {
             : "left-[25px] right-[27px] top-[105.5px] gap-[3.68px]"
         }`}
       >
-        {weeks.map((week, wi) => (
+        {weeksGrid.map((week, wi) => (
           <div key={wi} className="flex items-start justify-between">
-            {week.map((cellDay, ci) =>
-              cellDay ? (
-                <span
+            {week.map((cellDay, ci) => {
+              if (!cellDay) return <span key={ci} className={cell} />;
+              const shape = `flex items-center justify-center rounded-full font-golos font-medium ${dayText} ${
+                cellDay.state === "today" ? round : cell
+              } ${dayColors[cellDay.state]}`;
+              const selectable =
+                cellDay.state === "open" || cellDay.state === "today";
+              return selectable ? (
+                <button
                   key={ci}
-                  className={`flex items-center justify-center rounded-full font-golos font-medium ${dayText} ${
-                    cellDay.state === "today" || cellDay.state === "selected"
-                      ? round
-                      : cell
-                  } ${dayColors[cellDay.state]}`}
+                  type="button"
+                  className={`${shape} cursor-pointer transition-colors hover:bg-black/5`}
+                  onClick={() => open({ y, m, d: cellDay.day })}
                 >
                   {cellDay.day}
-                </span>
+                </button>
               ) : (
-                <span key={ci} className={cell} />
-              )
-            )}
+                <span key={ci} className={shape}>
+                  {cellDay.day}
+                </span>
+              );
+            })}
           </div>
         ))}
       </div>
