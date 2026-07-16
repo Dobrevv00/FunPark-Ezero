@@ -46,7 +46,7 @@ export default function Hero() {
           Забавление, природа и незабравими моменти за цялото семейство, всичко
           на едно място.
         </p>
-        <YellowButton className="absolute left-[16px] right-[16px] top-[575px]">
+        <YellowButton booking className="absolute left-[16px] right-[16px] top-[575px]">
           Резервирай сега
         </YellowButton>
       </div>
@@ -62,7 +62,7 @@ export default function Hero() {
           Забавление, природа и незабравими моменти за цялото семейство, всичко
           на едно място.
         </p>
-        <YellowButton className="absolute left-[71px] top-[643px] w-[259px]">
+        <YellowButton booking className="absolute left-[71px] top-[643px] w-[259px]">
           Резервирай сега
         </YellowButton>
       </div>

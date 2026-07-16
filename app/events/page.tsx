@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
-import EventsMobileHeader from "@/components/EventsMobileHeader";
 import Footer from "@/components/Footer";
 import Badge from "@/components/Badge";
 import YellowButton from "@/components/YellowButton";
@@ -167,7 +166,7 @@ function EventCard({ ev }: { ev: (typeof events)[number] }) {
       <p className="absolute left-[25px] right-[114px] top-[100px] font-golos text-[16px] leading-[1.23] text-[#3f3f46]">
         {ev.desc}
       </p>
-      <YellowButton className="absolute left-[25px] top-[167px] w-[208px]">
+      <YellowButton booking className="absolute left-[25px] top-[167px] w-[208px]">
         Резервирай
       </YellowButton>
       <a
@@ -251,10 +250,7 @@ function MobileEventCard({ ev }: { ev: (typeof mobileEvents)[number] }) {
 export default function EventsPage() {
   return (
     <>
-      <div className="hidden lg:block">
-        <Header />
-      </div>
-      <EventsMobileHeader />
+      <Header />
 
       <main className="overflow-x-clip">
         {/* ===== Мобилна версия ===== */}
@@ -347,7 +343,7 @@ export default function EventsPage() {
           </section>
 
           {/* Футър */}
-          <footer className="flex flex-col items-start gap-[28px] bg-[#0e2f20] px-[20px] pb-[110px] pt-[56px]">
+          <footer className="flex flex-col items-start gap-[28px] bg-[#0e2f20] px-[20px] pb-[56px] pt-[56px]">
             <div className="relative h-[42px] w-[62px] overflow-hidden">
               <span className="absolute inset-[2.67%_0_0_0]">
                 <img
@@ -395,16 +391,6 @@ export default function EventsPage() {
               © 2026 Fun Park Ezero. Всички права запазени.
             </p>
           </footer>
-
-          {/* Sticky CTA */}
-          <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center bg-[rgba(255,254,254,0.97)] px-[20px] pb-[20px] pt-[14px] shadow-[0px_-6px_24px_0px_rgba(0,0,0,0.12)]">
-            <a
-              href="#"
-              className="flex flex-1 items-center justify-center rounded-full bg-pine py-[16px] font-golos text-[16px] font-semibold leading-none text-offwhite transition-colors hover:bg-forest"
-            >
-              Резервирай
-            </a>
-          </div>
         </div>
 
         {/* ===== Десктоп версия ===== */}
@@ -501,7 +487,7 @@ export default function EventsPage() {
                 Опитайте да промените филтрите или се върнете по-късно, за да
                 <br /> видите новите ни предложения.
               </p>
-              <YellowButton className="mt-[35px] w-[259px]">
+              <YellowButton booking className="mt-[35px] w-[259px]">
                 Резервирай сега
               </YellowButton>
             </div>

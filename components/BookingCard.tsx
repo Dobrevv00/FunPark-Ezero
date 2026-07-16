@@ -1,5 +1,6 @@
 import YellowButton from "./YellowButton";
 import Badge from "./Badge";
+import { weekdays, weeks, type DayState } from "./calendarData";
 
 const steps = [
   { n: 1, label: "Избери дата", circleLeft: 684.31, labelLeft: 664 },
@@ -12,21 +13,6 @@ const mobileSteps = [
   { n: 2, top: 333, label: "Избери час" },
   { n: 3, top: 405, label: "Информация" },
   { n: 4, top: 477, label: "Потвърждение" },
-];
-
-type DayState = "past" | "closed" | "today" | "selected" | "open";
-type Day = { day: number; state: DayState } | null;
-
-const weekdays = ["пн", "вт", "ср", "чт", "пт", "сб", "нд"];
-
-const d = (day: number, state: DayState = "open"): Day => ({ day, state });
-
-const weeks: Day[][] = [
-  [null, null, d(1, "past"), d(2, "past"), d(3, "past"), d(4, "past"), d(5, "closed")],
-  [d(6, "past"), d(7, "past"), d(8, "today"), d(9), d(10), d(11), d(12, "selected")],
-  [d(13), d(14), d(15), d(16), d(17), d(18), d(19, "closed")],
-  [d(20), d(21), d(22), d(23), d(24), d(25), d(26, "closed")],
-  [d(27), d(28), d(29), d(30), d(31), null, null],
 ];
 
 const dayColors: Record<DayState, string> = {
@@ -163,7 +149,7 @@ export default function BookingCard() {
           <Calendar mobile />
         </div>
 
-        <YellowButton className="absolute left-1/2 top-[933px] w-[327px] -translate-x-1/2">
+        <YellowButton booking className="absolute left-1/2 top-[933px] w-[327px] -translate-x-1/2">
           Започни резервация
         </YellowButton>
       </div>
@@ -183,7 +169,7 @@ export default function BookingCard() {
           няколко последователни стъпки ще резервираш своето място и ще бъдеш
           готов за едно незабравимо преживяване сред природата.
         </p>
-        <YellowButton className="absolute left-[90px] top-[413px] w-[259px]">
+        <YellowButton booking className="absolute left-[90px] top-[413px] w-[259px]">
           Започни резервация
         </YellowButton>
 

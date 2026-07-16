@@ -33,7 +33,7 @@ export default function CtaSection() {
             Резервирайте своя престой или събитие днес и си гарантирайте
             незабравими спомени.
           </p>
-          <YellowButton className="mt-[35px] w-[259px]">Резервирай сега</YellowButton>
+          <YellowButton booking className="mt-[35px] w-[259px]">Резервирай сега</YellowButton>
         </div>
       </section>
     </>

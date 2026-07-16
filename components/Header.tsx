@@ -31,25 +31,50 @@ export function Logo({ className }: { className: string }) {
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const pathname = usePathname();
 
   return (
     <header className="bg-offwhite">
       {/* Мобилна навигация */}
-      <div className="flex items-center justify-between px-[16px] pb-[12px] pt-[71px] lg:hidden">
-        <button
-          type="button"
-          aria-label="Меню"
-          aria-expanded={menuOpen}
-          className="cursor-pointer p-[4px]"
-          onClick={() => setMenuOpen(true)}
-        >
-          <img src="/icons/menu.svg" alt="" className="h-[16px] w-[24px]" />
-        </button>
-        <Logo className="h-[49px] w-[71px]" />
-        <button type="button" aria-label="Търсене" className="cursor-pointer">
-          <img src="/icons/search-dark.svg" alt="" className="h-[18px] w-[20px]" />
-        </button>
+      <div className="px-[16px] pb-[12px] pt-[71px] lg:hidden">
+        <div className="relative flex h-[49px] items-center justify-between">
+          <button
+            type="button"
+            aria-label="Меню"
+            aria-expanded={menuOpen}
+            className="cursor-pointer p-[4px]"
+            onClick={() => setMenuOpen(true)}
+          >
+            <img src="/icons/menu.svg" alt="" className="h-[16px] w-[24px]" />
+          </button>
+          <div className="absolute left-1/2 -translate-x-1/2">
+            <Logo className="h-[49px] w-[71px]" />
+          </div>
+          <button
+            type="button"
+            aria-label="Търсене"
+            aria-expanded={searchOpen}
+            className="cursor-pointer p-[4px]"
+            onClick={() => setSearchOpen((o) => !o)}
+          >
+            <img src="/icons/search-dark.svg" alt="" className="h-[18px] w-[20px]" />
+          </button>
+        </div>
+        {searchOpen && (
+          <form
+            role="search"
+            className="pt-[12px]"
+            onSubmit={(e) => e.preventDefault()}
+          >
+            <input
+              type="search"
+              autoFocus
+              placeholder="Потърси"
+              className="h-[40px] w-full rounded-[61px] border border-black/18 bg-[rgba(217,217,217,0.44)] px-[18px] text-[14px] text-ink outline-none placeholder:text-[#545454]"
+            />
+          </form>
+        )}
       </div>
 
       {/* Мобилно меню (сандвич) */}

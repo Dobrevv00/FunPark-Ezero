@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Golos_Text, Mulish } from "next/font/google";
+import BookingModalProvider from "@/components/BookingModal";
 import "./globals.css";
 
 const golos = Golos_Text({
@@ -26,7 +27,7 @@ export default function RootLayout({
   return (
     <html lang="bg">
       <body className={`${golos.variable} ${mulish.variable} font-mulish antialiased`}>
-        {children}
+        <BookingModalProvider>{children}</BookingModalProvider>
       </body>
     </html>
   );
