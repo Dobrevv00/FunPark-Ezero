@@ -1,10 +1,22 @@
 import Badge from "./Badge";
 
+const images = [
+  { src: "/images/restaurant-1.jpg", alt: "Салата в кутия върху дървена дъска" },
+  { src: "/images/restaurant-2.jpg", alt: "Маса с брускети, салати и грил" },
+  { src: "/images/restaurant-3.jpg", alt: "Панини и пържени картофи на масата" },
+];
+
+const cardBase =
+  "group overflow-hidden rounded-[10px] shadow-[0px_8px_22px_0px_rgba(0,0,0,0.1)] transition-[transform,box-shadow] duration-300 ease-out";
+
+const imgClass =
+  "h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.08]";
+
 export default function RestaurantSection() {
   return (
     <>
       {/* Мобилен вариант */}
-      <section className="overflow-hidden pt-[80px] lg:hidden">
+      <section className="pt-[80px] lg:hidden">
         <div className="flex justify-center">
           <span className="flex h-[27.288px] w-[86px] items-center justify-center rounded-[14.842px] border-[0.742px] border-[#3f3f46] text-[8.905px] leading-[1.3] tracking-[0.0891px] text-[#545454]">
             Ресторант
@@ -19,11 +31,16 @@ export default function RestaurantSection() {
           </p>
         </div>
 
-        {/* Галерия — плейсхолдъри по дизайн */}
-        <div className="relative mt-[72px] h-[325px] w-full">
-          <div className="absolute left-[-192px] top-[16px] h-[294px] w-[245px] border-[0.613px] border-[#d4d4d8] bg-[#d9d9d9]" />
-          <div className="absolute left-1/2 top-0 h-[325px] w-[276px] -translate-x-1/2 border-[0.613px] border-[#d4d4d8] bg-[#d9d9d9]" />
-          <div className="absolute left-[calc(75%+48.5px)] top-[16px] h-[294px] w-[245px] border-[0.613px] border-[#d4d4d8] bg-[#d9d9d9]" />
+        {/* Галерия — карусел с плъзгане */}
+        <div className="mt-[32px] flex snap-x snap-mandatory gap-[14px] overflow-x-auto px-[16px] pb-[24px] pt-[8px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {images.map((img) => (
+            <div
+              key={img.src}
+              className={`${cardBase} relative h-[280px] w-[calc(100%-48px)] shrink-0 snap-center active:scale-[0.98] active:duration-100`}
+            >
+              <img src={img.src} alt={img.alt} className={imgClass} />
+            </div>
+          ))}
         </div>
       </section>
 
@@ -42,11 +59,20 @@ export default function RestaurantSection() {
           </p>
         </div>
 
-        {/* Галерия — плейсхолдъри по дизайн */}
+        {/* Галерия */}
         <div className="relative mx-auto mt-[97px] h-[443px] max-w-[1512px]">
-          <div className="absolute left-[-23px] top-[33px] h-[364.289px] w-[485.719px] border-[1.214px] border-[#d4d4d8] bg-[#d9d9d9]" />
-          <div className="absolute left-[calc(25%+106.72px)] top-0 h-[410px] w-[547px] border-[1.214px] border-[#d4d4d8] bg-[#d9d9d9]" />
-          <div className="absolute left-[calc(66.67%+43.72px)] top-[23px] h-[364.289px] w-[485.719px] border-[1.214px] border-[#d4d4d8] bg-[#d9d9d9]" />
+          {[
+            "left-[-23px] top-[33px] h-[364.289px] w-[485.719px]",
+            "left-[calc(25%+106.72px)] top-0 h-[410px] w-[547px]",
+            "left-[calc(66.67%+43.72px)] top-[23px] h-[364.289px] w-[485.719px]",
+          ].map((pos, i) => (
+            <div
+              key={images[i].src}
+              className={`${cardBase} absolute hover:z-10 hover:scale-[1.03] hover:shadow-[0px_22px_48px_0px_rgba(0,0,0,0.22)] ${pos}`}
+            >
+              <img src={images[i].src} alt={images[i].alt} className={imgClass} />
+            </div>
+          ))}
         </div>
       </section>
     </>

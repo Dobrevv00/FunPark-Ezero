@@ -97,11 +97,11 @@ export default function WhyUs() {
           {whyText}
         </p>
 
-        <div className="mx-auto mt-[67px] grid w-fit grid-cols-2 gap-x-[16px] gap-y-[11px] px-[16px]">
+        <div className="mx-auto mt-[67px] grid max-w-[370px] grid-cols-2 gap-x-[16px] gap-y-[11px] px-[16px]">
           {featureCards.map((card) => (
             <div
               key={card.title}
-              className="relative h-[187px] w-[177px] rounded-[5.145px] shadow-[0px_5.861px_17.582px_0px_rgba(0,0,0,0.08)]"
+              className="relative h-[187px] w-full rounded-[5.145px] shadow-[0px_5.861px_17.582px_0px_rgba(0,0,0,0.08)]"
               style={{ backgroundColor: card.mobileBg }}
             >
               <div className="absolute right-[15px] top-[15px] flex size-[34px] items-center justify-center">
@@ -113,10 +113,10 @@ export default function WhyUs() {
                   style={{ width: card.mobileIconSize, height: card.mobileIconSize }}
                 />
               </div>
-              <h4 className="absolute left-[14px] top-[51px] w-[113px] font-golos text-[16px] font-semibold leading-[1.15] tracking-[0.16px] text-ink">
+              <h4 className="absolute left-[14px] right-[50px] top-[51px] font-golos text-[16px] font-semibold leading-[1.15] tracking-[0.16px] text-ink">
                 {card.title}
               </h4>
-              <p className="absolute left-[14px] top-[95px] w-[152px] text-[11px] leading-[1.3] tracking-[0.11px] text-[#5b5b5b]">
+              <p className="absolute left-[14px] right-[11px] top-[95px] text-[11px] leading-[1.3] tracking-[0.11px] text-[#5b5b5b]">
                 {card.desc}
               </p>
             </div>

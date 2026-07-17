@@ -283,10 +283,18 @@ export default function ContactsPage() {
         </section>
 
         {/* Карта */}
-        <section className="mx-[32px] mt-[61px] flex h-[475px] items-center justify-center rounded-[10px] bg-[#d9d9d9]">
-          <p className="font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px] text-black">
-            Map
-          </p>
+        <section className="relative mx-[32px] mt-[61px] h-[475px] overflow-hidden rounded-[10px]">
+          <img
+            src="/images/map.jpg"
+            alt="Картата на Бургас с локацията на Fun Park Ezero"
+            className="absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/20" />
+          <img
+            src="/icons/map-pin.svg"
+            alt=""
+            className="absolute left-[73.27%] top-[48.8%] h-[98.85px] w-[82.82px]"
+          />
         </section>
 
         {/* CTA */}

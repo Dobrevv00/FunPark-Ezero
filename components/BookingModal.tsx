@@ -67,7 +67,8 @@ const ticketTypes = [
 
 type TicketKey = (typeof ticketTypes)[number]["key"];
 
-const progressWidths = [139, 280, 419, 511];
+/** Ширини от дизайна (139/280/419/511px спрямо лента от 556px) — в проценти, за да са верни и на тесен екран */
+const progressWidths = ["25%", "50.4%", "75.4%", "91.9%"];
 
 function Legend({ items }: { items: { icon: string; label: string }[] }) {
   return (

@@ -18,12 +18,6 @@ const steps = [
   { n: 4, label: "Потвърждение", circleLeft: 1072.19, labelLeft: 1044.12 },
 ];
 
-const mobileSteps = [
-  { n: 2, top: 333, label: "Избери час" },
-  { n: 3, top: 405, label: "Информация" },
-  { n: 4, top: 477, label: "Потвърждение" },
-];
-
 const dayColors: Record<DayState, string> = {
   past: "text-[#c9c6bd]",
   closed: "text-[#a1a1aa] line-through",
@@ -38,11 +32,12 @@ function Calendar({ mobile }: { mobile: boolean }) {
   const y = now.getFullYear();
   const m = now.getMonth();
   const weeksGrid = useMemo(() => getMonthWeeks(y, m, now), [y, m, now]);
-  const cell = mobile ? "h-[31.26px] w-[36.944px]" : "h-[40.483px] w-[47.843px]";
+  const cell = mobile ? "h-[31.26px] w-[34px]" : "h-[40.483px] w-[47.843px]";
   const round = mobile
-    ? "size-[36.944px] border-[1.066px]"
+    ? "size-[34px] border-[1.066px]"
     : "size-[47.843px] border-[1.38px]";
   const dayText = mobile ? "text-[11.319px]" : "text-[13.801px]";
+  const slot = mobile ? "flex flex-1 justify-center" : "flex";
   return (
     <>
       <p
@@ -56,14 +51,14 @@ function Calendar({ mobile }: { mobile: boolean }) {
       </p>
       <div
         className={`absolute flex justify-between ${
-          mobile ? "left-[15px] right-[14px] top-[93.5px]" : "left-[25px] right-[27px] top-[68.7px]"
+          mobile ? "left-[12px] right-[12px] top-[93.5px]" : "left-[25px] right-[27px] top-[68.7px]"
         }`}
       >
         {weekdays.map((wd) => (
           <span
             key={wd}
             className={`flex h-[22px] items-center justify-center font-golos font-semibold text-[#a1a1aa] ${
-              mobile ? "w-[36.944px] text-[12.127px]" : "w-[47.843px] text-[11.041px]"
+              mobile ? "flex-1 text-[12.127px]" : "w-[47.843px] text-[11.041px]"
             }`}
           >
             {wd}
@@ -73,31 +68,37 @@ function Calendar({ mobile }: { mobile: boolean }) {
       <div
         className={`absolute flex flex-col ${
           mobile
-            ? "left-[15px] right-[14px] top-[122px] gap-[2.842px]"
+            ? "left-[12px] right-[12px] top-[122px] gap-[2.842px]"
             : "left-[25px] right-[27px] top-[105.5px] gap-[3.68px]"
         }`}
       >
         {weeksGrid.map((week, wi) => (
           <div key={wi} className="flex items-start justify-between">
             {week.map((cellDay, ci) => {
-              if (!cellDay) return <span key={ci} className={cell} />;
+              if (!cellDay)
+                return (
+                  <span key={ci} className={slot}>
+                    <span className={cell} />
+                  </span>
+                );
               const shape = `flex items-center justify-center rounded-full font-golos font-medium ${dayText} ${
                 cellDay.state === "today" ? round : cell
               } ${dayColors[cellDay.state]}`;
               const selectable =
                 cellDay.state === "open" || cellDay.state === "today";
-              return selectable ? (
-                <button
-                  key={ci}
-                  type="button"
-                  className={`${shape} cursor-pointer transition-colors hover:bg-black/5`}
-                  onClick={() => open({ y, m, d: cellDay.day })}
-                >
-                  {cellDay.day}
-                </button>
-              ) : (
-                <span key={ci} className={shape}>
-                  {cellDay.day}
+              return (
+                <span key={ci} className={slot}>
+                  {selectable ? (
+                    <button
+                      type="button"
+                      className={`${shape} cursor-pointer transition-colors hover:bg-black/5`}
+                      onClick={() => open({ y, m, d: cellDay.day })}
+                    >
+                      {cellDay.day}
+                    </button>
+                  ) : (
+                    <span className={shape}>{cellDay.day}</span>
+                  )}
                 </span>
               );
             })}
@@ -112,64 +113,67 @@ export default function BookingCard() {
   return (
     <>
       {/* Мобилна карта */}
-      <div className="relative mx-auto h-[1017px] w-[370px] max-w-[calc(100%-32px)] rounded-[10px] bg-offwhite drop-shadow-[0px_11.389px_17.084px_rgba(0,0,0,0.08)] lg:hidden">
-        <h2 className="absolute left-[41px] top-[44px] w-[282px] font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px]">
+      <div className="mx-auto w-[370px] max-w-[calc(100%-32px)] rounded-[10px] bg-offwhite px-[20px] pb-[40px] pt-[44px] drop-shadow-[0px_11.389px_17.084px_rgba(0,0,0,0.08)] lg:hidden">
+        <h2 className="font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px]">
           <span className="text-ink">Резервирай своето</span>{" "}
           <span className="text-leaf">приключение</span>
         </h2>
-        <p className="absolute left-[41px] top-[118px] w-[309px] text-[14px] leading-[1.3] tracking-[0.14px] text-[#545454]">
+        <p className="mt-[16px] text-[14px] leading-[1.3] tracking-[0.14px] text-[#545454]">
           Провери наличните дати и избери кога искаш да посетиш парка. Само с
           няколко последователни стъпки ще резервираш своето място и ще бъдеш
           готов за едно незабравимо преживяване сред природата.
         </p>
 
         {/* Вертикални стъпки */}
-        <div className="absolute left-[41px] top-[246px] size-[48.676px] rounded-full bg-[rgba(161,161,170,0.35)]" />
-        <div className="absolute left-[47px] top-[252px] flex size-[37px] items-center justify-center rounded-full bg-gradient-to-t from-pine from-[92.5%] to-leaf to-[117.5%] font-golos text-[13.871px] font-medium text-offwhite">
-          1
-        </div>
-        <p className="absolute left-[104px] top-[260px] font-golos text-[10px] font-medium text-[rgba(63,63,70,0.5)]">
-          Стъпка 1
-        </p>
-        <p className="absolute left-[104px] top-[272px] font-golos text-[15px] font-medium text-[#3f3f46]">
-          Избери дата
-        </p>
-        {mobileSteps.map((s) => (
-          <div key={s.n}>
-            <div
-              className="absolute left-[48px] flex size-[33.714px] items-center justify-center rounded-full bg-[rgba(161,161,170,0.35)] font-golos text-[13.871px] font-medium text-offwhite"
-              style={{ top: s.top }}
-            >
-              {s.n}
+        <div className="mt-[36px] flex flex-col">
+          {steps.map((s, i) => (
+            <div key={s.n}>
+              <div className="flex items-center gap-[12px]">
+                <span className="flex size-[48.676px] shrink-0 items-center justify-center">
+                  {s.n === 1 ? (
+                    <span className="flex size-full items-center justify-center rounded-full bg-[rgba(161,161,170,0.35)]">
+                      <span className="flex size-[37px] items-center justify-center rounded-full bg-gradient-to-t from-pine from-[92.5%] to-leaf to-[117.5%] font-golos text-[13.871px] font-medium text-offwhite">
+                        1
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="flex size-[33.714px] items-center justify-center rounded-full bg-[rgba(161,161,170,0.35)] font-golos text-[13.871px] font-medium text-offwhite">
+                      {s.n}
+                    </span>
+                  )}
+                </span>
+                <span className="flex min-w-0 flex-col">
+                  <span
+                    className={`font-golos text-[10px] font-medium ${
+                      s.n === 1
+                        ? "text-[rgba(63,63,70,0.5)]"
+                        : "text-[rgba(63,63,70,0.35)]"
+                    }`}
+                  >
+                    Стъпка {s.n}
+                  </span>
+                  <span
+                    className={`font-golos text-[15px] font-medium ${
+                      s.n === 1 ? "text-[#3f3f46]" : "text-[#a1a1aa]"
+                    }`}
+                  >
+                    {s.label}
+                  </span>
+                </span>
+              </div>
+              {i < steps.length - 1 && (
+                <span className="ml-[24px] block h-[28px] border-l border-dashed border-[#a1a1aa]/50" />
+              )}
             </div>
-            <p
-              className="absolute left-[104px] font-golos text-[10px] font-medium text-[rgba(63,63,70,0.35)]"
-              style={{ top: s.top - 5 }}
-            >
-              Стъпка {s.n}
-            </p>
-            <p
-              className="absolute left-[104px] font-golos text-[15px] font-medium text-[#a1a1aa]"
-              style={{ top: s.top + 7 }}
-            >
-              {s.label}
-            </p>
-          </div>
-        ))}
-        {[300, 372, 444].map((t) => (
-          <div
-            key={t}
-            className="absolute left-[65px] h-[28px] border-l border-dashed border-[#a1a1aa]/50"
-            style={{ top: t }}
-          />
-        ))}
+          ))}
+        </div>
 
         {/* Календар */}
-        <div className="absolute left-1/2 top-[542px] h-[361px] w-[329px] -translate-x-1/2 rounded-[9.109px] bg-white shadow-[0px_10.374px_31.122px_0px_rgba(0,0,0,0.05),0px_5.187px_10.374px_0px_rgba(0,0,0,0.03)]">
+        <div className="relative mt-[36px] h-[361px] rounded-[9.109px] bg-white shadow-[0px_10.374px_31.122px_0px_rgba(0,0,0,0.05),0px_5.187px_10.374px_0px_rgba(0,0,0,0.03)]">
           <Calendar mobile />
         </div>
 
-        <YellowButton booking className="absolute left-1/2 top-[933px] w-[327px] -translate-x-1/2">
+        <YellowButton booking className="mt-[30px] h-[40px] w-full">
           Започни резервация
         </YellowButton>
       </div>

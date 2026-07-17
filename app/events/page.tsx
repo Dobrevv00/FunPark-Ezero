@@ -479,7 +479,13 @@ export default function EventsPage() {
           {/* Празно състояние */}
           <div className="mx-auto mt-[134px] max-w-[1512px] px-[32px]">
             <div className="flex h-[408px] flex-col items-center rounded-[10px] bg-offwhite px-[24px] pt-[36px] text-center shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
-              <div className="size-[85px] rounded-full bg-[#a1a1aa]" />
+              <div className="flex size-[85px] items-center justify-center overflow-hidden rounded-full bg-[rgba(106,142,78,0.3)]">
+                <img
+                  src="/icons/calendar-month.svg"
+                  alt=""
+                  className="size-[49px]"
+                />
+              </div>
               <h2 className="mt-[35px] font-golos text-[27.15px] font-semibold leading-[36.2px] text-[#1a1c1d]">
                 Няма намерени събития за избрания период
               </h2>
