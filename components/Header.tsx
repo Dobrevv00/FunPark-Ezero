@@ -4,6 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useBookingModal } from "./BookingModal";
+import AdminLoginModal from "./AdminLoginModal";
+import { Logo } from "./Logo";
+
+export { Logo };
 
 const navLinks = [
   { label: "Начало", href: "/" },
@@ -12,9 +16,14 @@ const navLinks = [
 ];
 
 const socials = [
-  { src: "/icons/facebook.svg", alt: "Facebook", className: "h-[20px] w-[10px]" },
-  { src: "/icons/twitter.svg", alt: "Twitter", className: "h-[18px] w-[22px]" },
-  { src: "/icons/instagram.svg", alt: "Instagram", className: "h-[22px] w-[22px]" },
+  {
+    src: "/icons/facebook.svg",
+    alt: "Facebook",
+    className: "h-[20px] w-[10px]",
+    href: "https://www.facebook.com/p/Fun-Park-Ezero-61577261426366/",
+  },
+  { src: "/icons/twitter.svg", alt: "Twitter", className: "h-[18px] w-[22px]", href: "#" },
+  { src: "/icons/instagram.svg", alt: "Instagram", className: "h-[22px] w-[22px]", href: "#" },
 ];
 
 type SearchEntry = {
@@ -42,22 +51,6 @@ function searchFor(query: string): SearchEntry[] {
   if (!q) return [];
   return searchIndex.filter((e) =>
     `${e.title} ${e.desc} ${e.keywords}`.toLowerCase().includes(q)
-  );
-}
-
-export function Logo({ className }: { className: string }) {
-  return (
-    <Link
-      href="/"
-      className={`relative block overflow-hidden transition-transform duration-300 ease-out hover:scale-110 active:scale-95 active:duration-100 ${className}`}
-    >
-      <span className="absolute inset-[2.67%_0_0_0]">
-        <img src="/icons/logo-mark.svg" alt="Fun Park Ezero" className="size-full" />
-      </span>
-      <span className="absolute inset-[0_37%_78.73%_34.4%]">
-        <img src="/icons/logo-leaf.svg" alt="" className="size-full" />
-      </span>
-    </Link>
   );
 }
 
@@ -103,6 +96,7 @@ function SearchResults({
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const pathname = usePathname();
@@ -214,13 +208,25 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+          <button
+            type="button"
+            className="cursor-pointer text-[20px] font-semibold leading-[26px] text-[#444444] transition-colors hover:text-leaf"
+            onClick={() => {
+              setMenuOpen(false);
+              setAdminOpen(true);
+            }}
+          >
+            Админ
+          </button>
         </nav>
 
         <div className="mt-auto flex items-center justify-center gap-[32px] pb-[56px]">
           {socials.map((s) => (
             <a
               key={s.alt}
-              href="#"
+              href={s.href}
+              target={s.href === "#" ? undefined : "_blank"}
+              rel={s.href === "#" ? undefined : "noopener noreferrer"}
               aria-label={s.alt}
               className="transition-opacity hover:opacity-60"
             >
@@ -246,6 +252,13 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
+          <button
+            type="button"
+            className="cursor-pointer text-[16px] font-semibold leading-[20px] text-[#444444] transition-colors hover:text-leaf"
+            onClick={() => setAdminOpen(true)}
+          >
+            Админ
+          </button>
         </nav>
 
         <div className="ml-auto flex items-center">
@@ -289,7 +302,9 @@ export default function Header() {
             {socials.map((s) => (
               <a
                 key={s.alt}
-                href="#"
+                href={s.href}
+                target={s.href === "#" ? undefined : "_blank"}
+                rel={s.href === "#" ? undefined : "noopener noreferrer"}
                 aria-label={s.alt}
                 className="transition-opacity hover:opacity-60"
               >
@@ -299,6 +314,8 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      {adminOpen && <AdminLoginModal onClose={() => setAdminOpen(false)} />}
     </header>
   );
 }

@@ -15,6 +15,14 @@ import {
   weekdayNames,
   weekdays,
 } from "./calendarData";
+import {
+  SLOT_CAPACITY,
+  countBookings,
+  getBookings,
+  getSlots,
+  saveBooking,
+  type BookingRecord,
+} from "@/lib/bookingStore";
 
 export type SelectedDate = { y: number; m: number; d: number };
 
@@ -37,27 +45,6 @@ const timeLegend = [
   { icon: "/icons/legend-today.svg", label: "Свободен" },
   { icon: "/icons/legend-busy.svg", label: "Зает" },
 ];
-
-const timeSlots = [
-  { time: "09:00", busy: false },
-  { time: "09:30", busy: false },
-  { time: "10:00", busy: false },
-  { time: "10:30", busy: false },
-  { time: "11:00", busy: false },
-  { time: "11:30", busy: false },
-  { time: "13:00", busy: false },
-  { time: "13:30", busy: false },
-  { time: "14:00", busy: false },
-  { time: "14:30", busy: false },
-  { time: "15:00", busy: false },
-  { time: "15:30", busy: false },
-  { time: "16:00", busy: false },
-  { time: "16:30", busy: false },
-  { time: "17:00", busy: false },
-  { time: "17:30", busy: false },
-];
-
-const slotRows = [0, 4, 8, 12].map((i) => timeSlots.slice(i, i + 4));
 
 const ticketTypes = [
   { key: "adult", name: "Възрастен", desc: "18+ години · 28 лв", price: 28 },
@@ -102,7 +89,48 @@ function Modal({
   const [selectedDate, setSelectedDate] = useState<SelectedDate | null>(
     initialDate
   );
-  const [selectedSlot, setSelectedSlot] = useState("10:30");
+  const [slots] = useState<string[]>(() => getSlots());
+  const [bookings, setBookings] = useState<BookingRecord[]>(() => getBookings());
+  const [selectedSlot, setSelectedSlot] = useState(() => {
+    const s = getSlots();
+    return s.includes("10:30") ? "10:30" : (s[0] ?? "");
+  });
+
+  const slotRows = useMemo(() => {
+    const rows: string[][] = [];
+    for (let i = 0; i < slots.length; i += 4) rows.push(slots.slice(i, i + 4));
+    return rows;
+  }, [slots]);
+
+  const dateKey = selectedDate
+    ? `${selectedDate.y}-${String(selectedDate.m + 1).padStart(2, "0")}-${String(selectedDate.d).padStart(2, "0")}`
+    : "";
+
+  const countFor = (time: string) => countBookings(bookings, dateKey, time);
+
+  const freeForSelected = SLOT_CAPACITY - countFor(selectedSlot);
+
+  const goForward = () => {
+    if (step === 4 && selectedDate) {
+      const record: BookingRecord = {
+        id: reservationNo,
+        dateKey,
+        dateLabel: `${selectedDate.d} ${monthNamesLower[selectedDate.m]} ${selectedDate.y}`,
+        time: selectedSlot,
+        name: form.name.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        adult: tickets.adult,
+        child: tickets.child,
+        small: tickets.small,
+        total: totalPrice,
+        createdAt: new Date().toISOString(),
+      };
+      saveBooking(record);
+      setBookings((b) => [...b, record]);
+    }
+    if (step < 5) setStep(step + 1);
+  };
   const [tickets, setTickets] = useState<Record<TicketKey, number>>({
     adult: 2,
     child: 1,
@@ -144,7 +172,7 @@ function Modal({
     step === 1
       ? selectedDate !== null
       : step === 2
-        ? selectedSlot !== ""
+        ? selectedSlot !== "" && countFor(selectedSlot) < SLOT_CAPACITY
         : step === 3
           ? totalCount > 0
           : form.name.trim() !== "" &&
@@ -361,34 +389,40 @@ function Modal({
 
         {step === 2 && (
           /* Стъпка 2 — час */
-          <div className="mx-auto mt-[38px] w-[523.5px] max-w-[calc(100%-32px)]">
+          <div className="mx-auto mt-[16px] w-[523.5px] max-w-[calc(100%-32px)]">
+            <p className="mb-[18px] min-h-[18px] text-center font-golos text-[12.5px] leading-[1.45] text-[#3f3f46]">
+              {selectedSlot
+                ? `Свободни места за ${selectedSlot}: ${freeForSelected} от ${SLOT_CAPACITY}`
+                : ""}
+            </p>
             <div className="flex flex-col gap-[12.583px]">
               {slotRows.map((row, ri) => (
                 <div key={ri} className="flex gap-[12.583px]">
-                  {row.map((slot) => {
-                    const isSelected = selectedSlot === slot.time;
-                    if (slot.busy) {
+                  {row.map((time) => {
+                    const isSelected = selectedSlot === time;
+                    const isFull = countFor(time) >= SLOT_CAPACITY;
+                    if (isFull) {
                       return (
                         <span
-                          key={slot.time}
+                          key={time}
                           className="flex flex-1 items-center justify-center rounded-[15.099px] bg-[#f0eee8] py-[15.099px] font-golos text-[17.616px] font-semibold text-[#c9c6bd] line-through"
                         >
-                          {slot.time}
+                          {time}
                         </span>
                       );
                     }
                     return (
                       <button
-                        key={slot.time}
+                        key={time}
                         type="button"
                         className={`flex flex-1 cursor-pointer items-center justify-center rounded-[15.099px] py-[15.099px] font-golos text-[17.616px] font-semibold transition-colors ${
                           isSelected
                             ? "bg-forest text-offwhite"
                             : "border-[1.258px] border-[#dddad2] text-[#3f3f46] hover:border-forest"
                         }`}
-                        onClick={() => setSelectedSlot(slot.time)}
+                        onClick={() => setSelectedSlot(time)}
                       >
-                        {slot.time}
+                        {time}
                       </button>
                     );
                   })}
@@ -609,7 +643,7 @@ function Modal({
                     ? "cursor-pointer hover:bg-[#e0b32f]"
                     : "cursor-not-allowed opacity-50"
                 }`}
-                onClick={() => step < 5 && setStep(step + 1)}
+                onClick={goForward}
               >
                 Напред
               </button>

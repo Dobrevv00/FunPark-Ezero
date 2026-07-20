@@ -8,9 +8,14 @@ const videos = [
 ];
 
 const socials = [
-  { src: "/icons/facebook-light.svg", alt: "Facebook", className: "h-[22px] w-[10px]" },
-  { src: "/icons/twitter-light.svg", alt: "Twitter", className: "h-[20px] w-[22px]" },
-  { src: "/icons/instagram-light.svg", alt: "Instagram", className: "h-[22px] w-[22px]" },
+  {
+    src: "/icons/facebook-light.svg",
+    alt: "Facebook",
+    className: "h-[22px] w-[10px]",
+    href: "https://www.facebook.com/p/Fun-Park-Ezero-61577261426366/",
+  },
+  { src: "/icons/twitter-light.svg", alt: "Twitter", className: "h-[20px] w-[22px]", href: "#" },
+  { src: "/icons/instagram-light.svg", alt: "Instagram", className: "h-[22px] w-[22px]", href: "#" },
 ];
 
 function TikTokCard({
@@ -107,7 +112,9 @@ export default function SocialFeed() {
           {socials.map((s) => (
             <a
               key={s.alt}
-              href="#"
+              href={s.href}
+              target={s.href === "#" ? undefined : "_blank"}
+              rel={s.href === "#" ? undefined : "noopener noreferrer"}
               aria-label={s.alt}
               className="transition-opacity hover:opacity-60"
             >
