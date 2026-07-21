@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Badge from "@/components/Badge";
 import YellowButton from "@/components/YellowButton";
+import ContactForm from "@/components/ContactForm";
 
 export const metadata: Metadata = {
   title: "Контакти | Fun Park Ezero",
@@ -31,73 +32,11 @@ const infoColumns = [
   },
 ];
 
-const formFields = [
-  { label: "Име", placeholder: "Вашето име", type: "text" },
-  { label: "Телефон", placeholder: "+359 875 2365", type: "tel" },
-  { label: "Имейл", placeholder: "your@email.com", type: "email" },
-];
-
-const labelGradient = {
-  backgroundImage:
-    "linear-gradient(179.62deg, rgb(129, 96, 63) 29.235%, rgb(27, 20, 13) 73.226%)",
-};
-
 function IconSquare({ col }: { col: (typeof infoColumns)[number] }) {
   return (
     <span className="flex size-[49px] items-center justify-center rounded-[10px] bg-gradient-to-t from-pine from-[92.5%] to-leaf to-[117.5%]">
       <img src={col.icon} alt="" className={col.iconClass} />
     </span>
-  );
-}
-
-function ContactForm({ mobile }: { mobile: boolean }) {
-  return (
-    <form
-      className={
-        mobile
-          ? "mt-[56px] flex flex-col gap-[12px]"
-          : "mt-[40px] flex flex-col gap-[23px] lg:absolute lg:left-[736px] lg:top-[82px] lg:mt-0 lg:w-[589px]"
-      }
-    >
-      {formFields.map((f) => (
-        <div key={f.label} className="flex flex-col">
-          <label
-            className="mb-[8px] bg-clip-text text-[16.386px] leading-[1.3] tracking-[0.164px] text-transparent"
-            style={labelGradient}
-          >
-            {f.label}
-          </label>
-          <input
-            type={f.type}
-            placeholder={f.placeholder}
-            className={`w-full rounded-[9.104px] bg-[rgba(161,161,170,0.15)] pl-[6px] pr-[12px] text-[16.386px] tracking-[0.164px] text-ink outline-none placeholder:text-black/30 ${
-              mobile ? "h-[45px]" : "h-[41px]"
-            }`}
-          />
-        </div>
-      ))}
-      <div className="flex flex-col">
-        <label
-          className="mb-[8px] bg-clip-text text-[16.386px] leading-[1.3] tracking-[0.164px] text-transparent"
-          style={labelGradient}
-        >
-          Съобщение
-        </label>
-        <textarea
-          placeholder="Въпроси и коментари..."
-          className="h-[166.6px] w-full resize-none rounded-[9.104px] bg-[rgba(161,161,170,0.15)] px-[6px] py-[13px] text-[16.386px] tracking-[0.164px] text-ink outline-none placeholder:text-black/30"
-        />
-      </div>
-      <YellowButton
-        className={
-          mobile
-            ? "mt-[27px] h-[40px] w-full"
-            : "mt-[8px] w-[300px] max-w-full self-center"
-        }
-      >
-        Изпрати запитване
-      </YellowButton>
-    </form>
   );
 }
 

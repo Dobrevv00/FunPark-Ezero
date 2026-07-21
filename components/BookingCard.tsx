@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import YellowButton from "./YellowButton";
 import Badge from "./Badge";
 import { useBookingModal } from "./BookingModal";
+import { getBlockedDaySet } from "@/lib/bookingStore";
 import {
   getMonthWeeks,
   monthNames,
@@ -31,7 +32,10 @@ function Calendar({ mobile }: { mobile: boolean }) {
   const now = useMemo(() => new Date(), []);
   const y = now.getFullYear();
   const m = now.getMonth();
-  const weeksGrid = useMemo(() => getMonthWeeks(y, m, now), [y, m, now]);
+  const weeksGrid = useMemo(
+    () => getMonthWeeks(y, m, now, getBlockedDaySet()),
+    [y, m, now]
+  );
   const cell = mobile ? "h-[31.26px] w-[34px]" : "h-[40.483px] w-[47.843px]";
   const round = mobile
     ? "size-[34px] border-[1.066px]"

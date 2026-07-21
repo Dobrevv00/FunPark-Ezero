@@ -16,13 +16,16 @@ import {
   weekdays,
 } from "./calendarData";
 import {
-  SLOT_CAPACITY,
   countBookings,
+  getBlockedDaySet,
   getBookings,
+  getCapacityFor,
   getSlots,
+  isSlotBlocked,
   saveBooking,
   type BookingRecord,
 } from "@/lib/bookingStore";
+import { isValidBgPhone, isValidEmail } from "@/lib/validation";
 
 export type SelectedDate = { y: number; m: number; d: number };
 
@@ -95,6 +98,7 @@ function Modal({
     const s = getSlots();
     return s.includes("10:30") ? "10:30" : (s[0] ?? "");
   });
+  const [places, setPlaces] = useState(1);
 
   const slotRows = useMemo(() => {
     const rows: string[][] = [];
@@ -107,8 +111,21 @@ function Modal({
     : "";
 
   const countFor = (time: string) => countBookings(bookings, dateKey, time);
+  const capacityForTime = (time: string) =>
+    dateKey ? getCapacityFor(dateKey, time) : 20;
 
-  const freeForSelected = SLOT_CAPACITY - countFor(selectedSlot);
+  const selectedCapacity = capacityForTime(selectedSlot);
+  const freeForSelected = selectedCapacity - countFor(selectedSlot);
+
+  // избор на час + свеждане на броя места до свободните за него (поне 1)
+  const pickSlot = (time: string) => {
+    setSelectedSlot(time);
+    const free = capacityForTime(time) - countFor(time);
+    setPlaces((p) => Math.max(1, Math.min(p, free)));
+  };
+
+  const changePlaces = (delta: number) =>
+    setPlaces((p) => Math.max(1, Math.min(freeForSelected, p + delta)));
 
   const goForward = () => {
     if (step === 4 && selectedDate) {
@@ -117,6 +134,7 @@ function Modal({
         dateKey,
         dateLabel: `${selectedDate.d} ${monthNamesLower[selectedDate.m]} ${selectedDate.y}`,
         time: selectedSlot,
+        places,
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
@@ -139,9 +157,10 @@ function Modal({
   const [form, setForm] = useState({ name: "", phone: "", email: "" });
   const [consent, setConsent] = useState(true);
 
+  const blockedDays = useMemo(() => getBlockedDaySet(), []);
   const weeksGrid = useMemo(
-    () => getMonthWeeks(view.y, view.m, now),
-    [view, now]
+    () => getMonthWeeks(view.y, view.m, now, blockedDays),
+    [view, now, blockedDays]
   );
 
   useEffect(() => {
@@ -172,12 +191,15 @@ function Modal({
     step === 1
       ? selectedDate !== null
       : step === 2
-        ? selectedSlot !== "" && countFor(selectedSlot) < SLOT_CAPACITY
+        ? selectedSlot !== "" &&
+          !isSlotBlocked(dateKey, selectedSlot) &&
+          places >= 1 &&
+          places <= freeForSelected
         : step === 3
           ? totalCount > 0
           : form.name.trim() !== "" &&
-            form.phone.trim() !== "" &&
-            form.email.trim() !== "" &&
+            isValidBgPhone(form.phone) &&
+            isValidEmail(form.email) &&
             consent;
 
   const reservationNo = useMemo(
@@ -230,9 +252,11 @@ function Modal({
     "Вашите данни",
   ];
 
-  const dateLabel = selectedDate
-    ? `${weekdayNames[new Date(selectedDate.y, selectedDate.m, selectedDate.d).getDay()]} · ${selectedDate.d} ${monthNamesLower[selectedDate.m]} ${selectedDate.y} · Въжено съоръжение`
+  const shortDateLabel = selectedDate
+    ? `${weekdayNames[new Date(selectedDate.y, selectedDate.m, selectedDate.d).getDay()]} · ${selectedDate.d} ${monthNamesLower[selectedDate.m]} ${selectedDate.y}`
     : "";
+
+  const dateLabel = selectedDate ? `${shortDateLabel} · Въжено съоръжение` : "";
 
   return (
     <div
@@ -390,9 +414,14 @@ function Modal({
         {step === 2 && (
           /* Стъпка 2 — час */
           <div className="mx-auto mt-[16px] w-[523.5px] max-w-[calc(100%-32px)]">
+            {shortDateLabel && (
+              <p className="mb-[6px] text-center font-golos text-[14px] font-semibold text-forest">
+                {shortDateLabel}
+              </p>
+            )}
             <p className="mb-[18px] min-h-[18px] text-center font-golos text-[12.5px] leading-[1.45] text-[#3f3f46]">
               {selectedSlot
-                ? `Свободни места за ${selectedSlot}: ${freeForSelected} от ${SLOT_CAPACITY}`
+                ? `Свободни места за ${selectedSlot}: ${freeForSelected} от ${selectedCapacity}`
                 : ""}
             </p>
             <div className="flex flex-col gap-[12.583px]">
@@ -400,11 +429,13 @@ function Modal({
                 <div key={ri} className="flex gap-[12.583px]">
                   {row.map((time) => {
                     const isSelected = selectedSlot === time;
-                    const isFull = countFor(time) >= SLOT_CAPACITY;
-                    if (isFull) {
+                    const blocked = isSlotBlocked(dateKey, time);
+                    const isFull = countFor(time) >= capacityForTime(time);
+                    if (blocked || isFull) {
                       return (
                         <span
                           key={time}
+                          title={blocked ? "Блокиран час" : "Няма свободни места"}
                           className="flex flex-1 items-center justify-center rounded-[15.099px] bg-[#f0eee8] py-[15.099px] font-golos text-[17.616px] font-semibold text-[#c9c6bd] line-through"
                         >
                           {time}
@@ -420,7 +451,7 @@ function Modal({
                             ? "bg-forest text-offwhite"
                             : "border-[1.258px] border-[#dddad2] text-[#3f3f46] hover:border-forest"
                         }`}
-                        onClick={() => setSelectedSlot(time)}
+                        onClick={() => pickSlot(time)}
                       >
                         {time}
                       </button>
@@ -428,6 +459,49 @@ function Modal({
                   })}
                 </div>
               ))}
+            </div>
+
+            {/* Брой места за избрания час */}
+            <div className="mt-[20px] flex items-center justify-between rounded-[15.099px] bg-[rgba(161,161,170,0.12)] px-[20px] py-[14px]">
+              <div className="flex flex-col">
+                <span className="font-golos text-[15px] font-semibold text-ink">
+                  Брой места
+                </span>
+                <span className="font-golos text-[12.5px] text-[#a1a1aa]">
+                  за {selectedSlot} · макс. {freeForSelected}
+                </span>
+              </div>
+              <div className="flex items-center gap-[16px]">
+                <button
+                  type="button"
+                  aria-label="По-малко места"
+                  disabled={places <= 1}
+                  className={`flex size-[40px] items-center justify-center rounded-full border-[1.947px] border-[#dddad2] font-golos text-[20px] font-semibold transition-colors ${
+                    places <= 1
+                      ? "cursor-not-allowed text-[#c9c6bd]"
+                      : "cursor-pointer text-[#3f3f46] hover:bg-black/5"
+                  }`}
+                  onClick={() => changePlaces(-1)}
+                >
+                  −
+                </button>
+                <span className="w-[24px] text-center font-golos text-[20px] font-bold text-ink">
+                  {places}
+                </span>
+                <button
+                  type="button"
+                  aria-label="Повече места"
+                  disabled={places >= freeForSelected}
+                  className={`flex size-[40px] items-center justify-center rounded-full font-golos text-[20px] font-semibold text-offwhite transition-colors ${
+                    places >= freeForSelected
+                      ? "cursor-not-allowed bg-[#dddad2]"
+                      : "cursor-pointer bg-forest hover:bg-pine"
+                  }`}
+                  onClick={() => changePlaces(1)}
+                >
+                  +
+                </button>
+              </div>
             </div>
 
             <div className="mt-[18px]">
@@ -518,22 +592,39 @@ function Modal({
                   { key: "phone", label: "Телефон *", placeholder: "+359 875 2365", type: "tel" },
                   { key: "email", label: "Имейл *", placeholder: "your@email.com", type: "email" },
                 ] as const
-              ).map((f) => (
-                <div key={f.key} className="flex flex-col gap-[10px]">
-                  <label className="font-golos text-[14.135px] font-medium text-ink">
-                    {f.label}
-                  </label>
-                  <input
-                    type={f.type}
-                    placeholder={f.placeholder}
-                    value={form[f.key]}
-                    onChange={(e) =>
-                      setForm((prev) => ({ ...prev, [f.key]: e.target.value }))
-                    }
-                    className="h-[41px] w-full rounded-[9.104px] bg-[rgba(161,161,170,0.15)] pl-[6px] pr-[12px] text-[16.386px] tracking-[0.164px] text-ink outline-none placeholder:text-black/30"
-                  />
-                </div>
-              ))}
+              ).map((f) => {
+                const val = form[f.key];
+                let error = "";
+                if (val.trim() !== "") {
+                  if (f.key === "phone" && !isValidBgPhone(val))
+                    error = "Невалиден телефон (напр. +359 88 123 4567).";
+                  if (f.key === "email" && !isValidEmail(val))
+                    error = "Невалиден имейл адрес.";
+                }
+                return (
+                  <div key={f.key} className="flex flex-col gap-[10px]">
+                    <label className="font-golos text-[14.135px] font-medium text-ink">
+                      {f.label}
+                    </label>
+                    <input
+                      type={f.type}
+                      placeholder={f.placeholder}
+                      value={val}
+                      onChange={(e) =>
+                        setForm((prev) => ({ ...prev, [f.key]: e.target.value }))
+                      }
+                      className={`h-[41px] w-full rounded-[9.104px] bg-[rgba(161,161,170,0.15)] pl-[6px] pr-[12px] text-[16.386px] tracking-[0.164px] text-ink outline-none placeholder:text-black/30 ${
+                        error ? "ring-2 ring-red-400" : ""
+                      }`}
+                    />
+                    {error && (
+                      <p className="-mt-[4px] text-[12.5px] text-red-600">
+                        {error}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <button
@@ -586,7 +677,8 @@ function Modal({
                   : ""}
               </div>
               <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
-                {selectedSlot} ч
+                {selectedSlot} ч · {places}{" "}
+                {places === 1 ? "място" : "места"}
               </div>
               <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
                 {ticketsSummary}

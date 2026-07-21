@@ -3,9 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  SLOT_CAPACITY,
   TICKET_PRICES,
+  addBlock,
   deleteBooking,
+  getBlocked,
   getBookings,
+  getCapacityOverrides,
+  getSlots,
+  removeBlock,
+  removeCapacityOverride,
+  setCapacityFor,
   subscribeToStore,
   updateBooking,
   type BookingRecord,
@@ -32,6 +40,7 @@ function dateLabelFromKey(dateKey: string) {
 type Draft = {
   dateKey: string;
   time: string;
+  places: number;
   name: string;
   phone: string;
   email: string;
@@ -42,6 +51,247 @@ type Draft = {
 
 const inputCls =
   "h-[34px] w-full rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40";
+
+function CapacitySection() {
+  const [overrides, setOverrides] = useState<Record<string, number>>({});
+  const [slots, setSlotsState] = useState<string[]>([]);
+  const [capDate, setCapDate] = useState("");
+  const [capTime, setCapTime] = useState(""); // "" = целият ден
+  const [capValue, setCapValue] = useState<number>(SLOT_CAPACITY);
+  const [capError, setCapError] = useState("");
+
+  useEffect(() => {
+    const refresh = () => {
+      setOverrides(getCapacityOverrides());
+      setSlotsState(getSlots());
+    };
+    refresh();
+    return subscribeToStore(refresh);
+  }, []);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(capDate)) {
+      setCapError("Изберете дата.");
+      return;
+    }
+    if (!Number.isFinite(capValue) || capValue < 0 || capValue > 200) {
+      setCapError("Въведете брой между 0 и 200.");
+      return;
+    }
+    setCapacityFor(capDate, capTime || null, capValue);
+    setCapDate("");
+    setCapTime("");
+    setCapValue(SLOT_CAPACITY);
+    setCapError("");
+  };
+
+  const entries = Object.entries(overrides).sort(([a], [b]) =>
+    a.localeCompare(b)
+  );
+
+  return (
+    <section className="mb-[24px] rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
+      <h2 className="font-golos text-[20px] font-bold text-ink">
+        Капацитет по дни
+      </h2>
+      <p className="mt-[4px] text-[13px] text-[#545454]">
+        По подразбиране всеки ден има {SLOT_CAPACITY} свободни места на час. Тук
+        можете да зададете различен брой за цял ден или само за определен час.
+      </p>
+
+      <form onSubmit={submit} className="mt-[16px] flex flex-wrap items-end gap-[12px]">
+        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+          Дата
+          <input
+            type="date"
+            value={capDate}
+            onChange={(e) => {
+              setCapDate(e.target.value);
+              setCapError("");
+            }}
+            className={`${inputCls} w-[160px]`}
+          />
+        </label>
+        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+          Час
+          <select
+            value={capTime}
+            onChange={(e) => setCapTime(e.target.value)}
+            className={`${inputCls} w-[130px]`}
+          >
+            <option value="">Целият ден</option>
+            {slots.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+          Места
+          <input
+            type="number"
+            min={0}
+            max={200}
+            value={capValue}
+            onChange={(e) => {
+              setCapValue(Number(e.target.value));
+              setCapError("");
+            }}
+            className={`${inputCls} w-[90px]`}
+          />
+        </label>
+        <button
+          type="submit"
+          className="h-[34px] cursor-pointer rounded-[10px] bg-sun px-[24px] text-[14px] font-semibold text-black/80 transition-colors hover:bg-[#e0b32f]"
+        >
+          Запази
+        </button>
+        {capError && <p className="text-[13px] text-red-600">{capError}</p>}
+      </form>
+
+      {entries.length > 0 && (
+        <div className="mt-[20px] flex flex-wrap gap-[10px]">
+          {entries.map(([key, value]) => {
+            const [dateKey, time] = key.split("|");
+            return (
+              <span
+                key={key}
+                className="flex items-center gap-[10px] rounded-full border-[1.258px] border-[#dddad2] bg-white px-[14px] py-[7px] font-golos text-[14px] text-[#3f3f46]"
+              >
+                <span className="font-semibold">
+                  {dateLabelFromKey(dateKey)}
+                </span>
+                {time && <span className="text-ink">{time} ч</span>}
+                <span className="text-forest">
+                  {value} {time ? "места" : "места/час"}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Премахни ${key}`}
+                  className="cursor-pointer leading-none text-[#a1a1aa] transition-colors hover:text-red-600"
+                  onClick={() => removeCapacityOverride(key)}
+                >
+                  ✕
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BlockSection() {
+  const [blocked, setBlocked] = useState<string[]>([]);
+  const [slots, setSlotsState] = useState<string[]>([]);
+  const [blockDate, setBlockDate] = useState("");
+  const [blockTime, setBlockTime] = useState(""); // "" = целият ден
+  const [blockError, setBlockError] = useState("");
+
+  useEffect(() => {
+    const refresh = () => {
+      setBlocked(getBlocked());
+      setSlotsState(getSlots());
+    };
+    refresh();
+    return subscribeToStore(refresh);
+  }, []);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(blockDate)) {
+      setBlockError("Изберете дата.");
+      return;
+    }
+    addBlock(blockTime ? `${blockDate}|${blockTime}` : blockDate);
+    setBlockDate("");
+    setBlockTime("");
+    setBlockError("");
+  };
+
+  const entries = [...blocked].sort((a, b) => a.localeCompare(b));
+
+  return (
+    <section className="mb-[24px] rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
+      <h2 className="font-golos text-[20px] font-bold text-ink">
+        Блокиране на дати и часове
+      </h2>
+      <p className="mt-[4px] text-[13px] text-[#545454]">
+        Блокираните дати и часове стават неактивни в резервацията и не могат да
+        бъдат избрани от посетителите.
+      </p>
+
+      <form onSubmit={submit} className="mt-[16px] flex flex-wrap items-end gap-[12px]">
+        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+          Дата
+          <input
+            type="date"
+            value={blockDate}
+            onChange={(e) => {
+              setBlockDate(e.target.value);
+              setBlockError("");
+            }}
+            className={`${inputCls} w-[160px]`}
+          />
+        </label>
+        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+          Час
+          <select
+            value={blockTime}
+            onChange={(e) => setBlockTime(e.target.value)}
+            className={`${inputCls} w-[130px]`}
+          >
+            <option value="">Целият ден</option>
+            {slots.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+        </label>
+        <button
+          type="submit"
+          className="h-[34px] cursor-pointer rounded-[10px] bg-forest px-[24px] text-[14px] font-semibold text-white transition-colors hover:bg-pine"
+        >
+          Блокирай
+        </button>
+        {blockError && <p className="text-[13px] text-red-600">{blockError}</p>}
+      </form>
+
+      {entries.length > 0 && (
+        <div className="mt-[20px] flex flex-wrap gap-[10px]">
+          {entries.map((key) => {
+            const [dateKey, time] = key.split("|");
+            return (
+              <span
+                key={key}
+                className="flex items-center gap-[10px] rounded-full border border-red-200 bg-red-50 px-[14px] py-[7px] font-golos text-[14px] text-[#3f3f46]"
+              >
+                <span className="font-semibold">
+                  {dateLabelFromKey(dateKey)}
+                </span>
+                <span className="text-red-600">
+                  {time ? `${time} ч · блокиран` : "цял ден · блокиран"}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Отблокирай ${key}`}
+                  className="cursor-pointer leading-none text-[#a1a1aa] transition-colors hover:text-forest"
+                  onClick={() => removeBlock(key)}
+                >
+                  ✕
+                </button>
+              </span>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
 
 function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
@@ -59,6 +309,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     setDraft({
       dateKey: b.dateKey,
       time: b.time,
+      places: b.places ?? 1,
       name: b.name,
       phone: b.phone,
       email: b.email,
@@ -143,6 +394,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <main className="mx-auto max-w-[1100px] px-[16px] pt-[24px]">
+        <CapacitySection />
+        <BlockSection />
+
         {/* Регистър */}
         <section className="rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
           <h2 className="font-golos text-[20px] font-bold text-ink">
@@ -164,6 +418,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     <th className="py-[10px] pr-[12px]">№</th>
                     <th className="py-[10px] pr-[12px]">Дата</th>
                     <th className="py-[10px] pr-[12px]">Час</th>
+                    <th className="py-[10px] pr-[12px]">Места</th>
                     <th className="py-[10px] pr-[12px]">Име</th>
                     <th className="py-[10px] pr-[12px]">Телефон</th>
                     <th className="py-[10px] pr-[12px]">Имейл</th>
@@ -208,6 +463,25 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                             />
                           ) : (
                             b.time
+                          )}
+                        </td>
+                        <td className="py-[12px] pr-[12px]">
+                          {isEditing ? (
+                            <input
+                              type="number"
+                              min={1}
+                              max={200}
+                              value={draft.places}
+                              onChange={(e) =>
+                                setField(
+                                  "places",
+                                  Math.max(1, Number(e.target.value) || 1)
+                                )
+                              }
+                              className={`${inputCls} w-[64px]`}
+                            />
+                          ) : (
+                            (b.places ?? 1)
                           )}
                         </td>
                         <td className="py-[12px] pr-[12px]">
