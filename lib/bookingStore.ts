@@ -95,26 +95,32 @@ export function saveBooking(record: BookingRecord) {
  */
 export function tryBook(
   record: BookingRecord
-): { ok: true; free: number } | { ok: false; free: number; reason: "full" | "blocked" } {
+):
+  | { ok: true }
+  | { ok: false; reason: "full" | "blocked"; seat?: string; free: number } {
   const fresh = getBookings();
   if (isSlotBlocked(record.dateKey, record.time)) {
-    return { ok: false, free: 0, reason: "blocked" };
+    return { ok: false, reason: "blocked", free: 0 };
   }
-  // наличност за избрания вид седалка
-  const seatFree =
-    seatCap(record.seatType) -
-    countSeat(fresh, record.dateKey, record.time, record.seatType);
+  // проверка на всеки избран вид седалка поотделно
+  for (const st of SEAT_TYPES) {
+    const want = record.seats[st.key] ?? 0;
+    if (want <= 0) continue;
+    const free = st.cap - countSeat(fresh, record.dateKey, record.time, st.key);
+    if (want > free) {
+      return { ok: false, reason: "full", seat: st.key, free: Math.max(0, free) };
+    }
+  }
   // общ капацитет за часа (може да е ограничен от админа)
   const totalFree =
     getCapacityFor(record.dateKey, record.time) -
     countBookings(fresh, record.dateKey, record.time);
-  const free = Math.max(0, Math.min(seatFree, totalFree));
-  if (record.places > free) {
-    return { ok: false, free, reason: "full" };
+  if (record.places > totalFree) {
+    return { ok: false, reason: "full", free: Math.max(0, totalFree) };
   }
   localStorage.setItem(BOOKINGS_KEY, JSON.stringify([...fresh, record]));
   emitChange();
-  return { ok: true, free: free - record.places };
+  return { ok: true };
 }
 
 export function updateBooking(record: BookingRecord) {
@@ -256,10 +262,8 @@ export function countSeat(
   seatType: string
 ) {
   return bookings
-    .filter(
-      (b) => b.dateKey === dateKey && b.time === time && b.seatType === seatType
-    )
-    .reduce((sum, b) => sum + (b.places ?? 1), 0);
+    .filter((b) => b.dateKey === dateKey && b.time === time)
+    .reduce((sum, b) => sum + (b.seats?.[seatType as SeatKey] ?? 0), 0);
 }
 
 /** Абонамент за промени (вкл. от други табове) */

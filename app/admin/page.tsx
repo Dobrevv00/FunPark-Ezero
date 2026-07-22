@@ -11,9 +11,9 @@ import {
   getBookings,
   getCapacityOverrides,
   getSlots,
+  SEAT_TYPES,
   removeBlock,
   removeCapacityOverride,
-  seatLabel,
   setCapacityFor,
   subscribeToStore,
   updateBooking,
@@ -487,7 +487,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                           )}
                         </td>
                         <td className="py-[12px] pr-[12px] whitespace-nowrap">
-                          {b.seatType ? seatLabel(b.seatType) : "—"}
+                          {b.seats
+                            ? SEAT_TYPES.filter((s) => b.seats[s.key] > 0)
+                                .map((s) => `${s.label} ×${b.seats[s.key]}`)
+                                .join(", ") || "—"
+                            : "—"}
                         </td>
                         <td className="py-[12px] pr-[12px]">
                           {isEditing ? (

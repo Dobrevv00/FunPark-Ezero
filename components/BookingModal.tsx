@@ -19,6 +19,7 @@ import {
   SEAT_TYPES,
   countBookings,
   countSeat,
+  emptySeats,
   getBlockedDaySet,
   getBookings,
   getCapacityFor,
@@ -26,8 +27,11 @@ import {
   isSlotBlocked,
   seatCap,
   seatLabel,
+  seatsTotal,
   tryBook,
   type BookingRecord,
+  type SeatCounts,
+  type SeatKey,
 } from "@/lib/bookingStore";
 import { isValidBgPhone, isValidEmail } from "@/lib/validation";
 
@@ -102,8 +106,7 @@ function Modal({
     const s = getSlots();
     return s.includes("10:30") ? "10:30" : (s[0] ?? "");
   });
-  const [places, setPlaces] = useState(1);
-  const [seatType, setSeatType] = useState<string>(SEAT_TYPES[1].key);
+  const [seatQty, setSeatQty] = useState<SeatCounts>(emptySeats);
   const [availabilityError, setAvailabilityError] = useState("");
 
   const slotRows = useMemo(() => {
@@ -120,34 +123,38 @@ function Modal({
   const capacityForTime = (time: string) =>
     dateKey ? getCapacityFor(dateKey, time) : 20;
 
-  // свободни места за конкретен вид седалка за даден час (ограничени и от общия капацитет)
-  const seatFree = (time: string, seat: string) => {
-    const bySeat = seatCap(seat) - countSeat(bookings, dateKey, time, seat);
-    const totalFree = capacityForTime(time) - countFor(time);
-    return Math.max(0, Math.min(bySeat, totalFree));
+  const selectedCapacity = capacityForTime(selectedSlot);
+  const totalSelected = seatsTotal(seatQty);
+
+  // вече заети места от други за даден вид седалка
+  const seatTaken = (seat: SeatKey) =>
+    countSeat(bookings, dateKey, selectedSlot, seat);
+  // свободни за вид (капацитет на вида минус заетите)
+  const seatFree = (seat: SeatKey) => Math.max(0, seatCap(seat) - seatTaken(seat));
+  // общо оставащи места за часа (спрямо капацитета) минус вече избраните в тази резервация
+  const totalRemaining =
+    selectedCapacity - countFor(selectedSlot) - totalSelected;
+
+  // колко още може да се добави от даден вид (лимит на вида И общ капацитет)
+  const canAdd = (seat: SeatKey) =>
+    seatQty[seat] < seatFree(seat) && totalRemaining > 0;
+
+  const changeSeat = (seat: SeatKey, delta: number) => {
+    setAvailabilityError("");
+    setSeatQty((q) => {
+      if (delta > 0 && !(q[seat] < seatFree(seat) &&
+          selectedCapacity - countFor(selectedSlot) - seatsTotal(q) > 0))
+        return q;
+      return { ...q, [seat]: Math.max(0, q[seat] + delta) };
+    });
   };
 
-  const selectedCapacity = capacityForTime(selectedSlot);
-  const freeForSelected = selectedCapacity - countFor(selectedSlot);
-  const seatFreeForSelected = seatFree(selectedSlot, seatType);
-
-  // избор на час + свеждане на броя места до свободните за избрания вид седалка
+  // при смяна на час нулираме избора (наличността е различна за всеки час)
   const pickSlot = (time: string) => {
     setSelectedSlot(time);
     setAvailabilityError("");
-    const free = seatFree(time, seatType);
-    setPlaces((p) => Math.max(1, Math.min(p, Math.max(1, free))));
+    setSeatQty(emptySeats());
   };
-
-  const pickSeat = (seat: string) => {
-    setSeatType(seat);
-    setAvailabilityError("");
-    const free = seatFree(selectedSlot, seat);
-    setPlaces((p) => Math.max(1, Math.min(p, Math.max(1, free))));
-  };
-
-  const changePlaces = (delta: number) =>
-    setPlaces((p) => Math.max(1, Math.min(seatFreeForSelected, p + delta)));
 
   const goForward = () => {
     if (step === 4 && selectedDate) {
@@ -156,8 +163,8 @@ function Modal({
         dateKey,
         dateLabel: `${selectedDate.d} ${monthNamesLower[selectedDate.m]} ${selectedDate.y}`,
         time: selectedSlot,
-        seatType,
-        places,
+        seats: seatQty,
+        places: totalSelected,
         name: form.name.trim(),
         phone: form.phone.trim(),
         email: form.email.trim(),
@@ -175,11 +182,13 @@ function Modal({
         setAvailabilityError(
           result.reason === "blocked"
             ? `Часът ${selectedSlot} вече не е достъпен. Моля, изберете друг.`
-            : `Съжаляваме, за ${selectedSlot} · „${seatLabel(seatType)}“ останаха само ${result.free} ${
-                result.free === 1 ? "свободно място" : "свободни места"
-              }. Моля, коригирайте броя или изберете друг вид/час.`
+            : result.seat
+              ? `Съжаляваме, за ${selectedSlot} · „${seatLabel(result.seat)}“ останаха само ${result.free} ${
+                  result.free === 1 ? "свободно място" : "свободни места"
+                }. Моля, коригирайте броя.`
+              : `Съжаляваме, за ${selectedSlot} няма достатъчно свободни места. Моля, коригирайте броя или изберете друг час.`
         );
-        setPlaces((p) => Math.max(1, Math.min(p, result.free || 1)));
+        setSeatQty(emptySeats());
         setStep(2);
         return;
       }
@@ -231,8 +240,9 @@ function Modal({
       : step === 2
         ? selectedSlot !== "" &&
           !isSlotBlocked(dateKey, selectedSlot) &&
-          places >= 1 &&
-          places <= seatFreeForSelected
+          totalSelected >= 1 &&
+          SEAT_TYPES.every((s) => seatQty[s.key] <= seatFree(s.key)) &&
+          totalSelected <= selectedCapacity - countFor(selectedSlot)
         : step === 3
           ? totalCount > 0
           : form.name.trim() !== "" &&
@@ -436,7 +446,7 @@ function Modal({
             )}
             <p className="mb-[18px] min-h-[18px] text-center font-golos text-[12.5px] leading-[1.45] text-[#3f3f46]">
               {selectedSlot
-                ? `Свободни места за ${selectedSlot}: ${freeForSelected} от ${selectedCapacity}`
+                ? `Свободни места за ${selectedSlot}: ${selectedCapacity - countFor(selectedSlot)} от ${selectedCapacity}`
                 : ""}
             </p>
             <div className="flex flex-col gap-[12.583px]">
@@ -476,41 +486,30 @@ function Modal({
               ))}
             </div>
 
-            {/* Вид седалка */}
+            {/* Видове седалки — брой за всеки поотделно */}
             <div className="mt-[20px] flex flex-col gap-[10px]">
-              <span className="font-golos text-[15px] font-semibold text-ink">
-                Вид седалка
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="font-golos text-[15px] font-semibold text-ink">
+                  Вид седалка
+                </span>
+                <span className="font-golos text-[13px] font-medium text-[#a1a1aa]">
+                  Общо избрани: {totalSelected}
+                </span>
+              </div>
               {SEAT_TYPES.map((s) => {
-                const free = seatFree(selectedSlot, s.key);
-                const active = seatType === s.key;
+                const free = seatFree(s.key);
+                const qty = seatQty[s.key];
                 const soldOut = free === 0;
+                const canMinus = qty > 0;
+                const canPlus = canAdd(s.key);
                 return (
-                  <button
+                  <div
                     key={s.key}
-                    type="button"
-                    disabled={soldOut}
-                    onClick={() => pickSeat(s.key)}
-                    className={`flex items-center justify-between rounded-[12px] border px-[16px] py-[12px] text-left transition-colors ${
-                      soldOut
-                        ? "cursor-not-allowed border-[#eceae4] bg-[#f6f5f2] text-[#c9c6bd]"
-                        : active
-                          ? "cursor-pointer border-forest bg-[rgba(23,87,59,0.06)]"
-                          : "cursor-pointer border-[#dddad2] hover:border-forest"
+                    className={`flex items-center justify-between rounded-[12px] border px-[16px] py-[12px] ${
+                      qty > 0 ? "border-forest bg-[rgba(23,87,59,0.06)]" : "border-[#dddad2]"
                     }`}
                   >
-                    <span className="flex items-center gap-[10px]">
-                      <span
-                        className={`flex size-[18px] items-center justify-center rounded-full border-[2px] ${
-                          active && !soldOut
-                            ? "border-forest"
-                            : "border-[#c9c6bd]"
-                        }`}
-                      >
-                        {active && !soldOut && (
-                          <span className="size-[9px] rounded-full bg-forest" />
-                        )}
-                      </span>
+                    <div className="flex flex-col">
                       <span
                         className={`font-golos text-[15px] font-semibold ${
                           soldOut ? "text-[#c9c6bd]" : "text-ink"
@@ -518,62 +517,48 @@ function Modal({
                       >
                         {s.label}
                       </span>
-                    </span>
-                    <span className="font-golos text-[13px] font-medium">
-                      {soldOut ? (
-                        <span className="text-[#c9c6bd]">Заето</span>
-                      ) : (
-                        <span className="text-forest">
-                          {free} свободни
-                        </span>
-                      )}
-                    </span>
-                  </button>
+                      <span className="font-golos text-[12.5px] font-medium">
+                        {soldOut ? (
+                          <span className="text-[#c9c6bd]">Заето</span>
+                        ) : (
+                          <span className="text-forest">{free} свободни</span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-[14px]">
+                      <button
+                        type="button"
+                        aria-label={`По-малко · ${s.label}`}
+                        disabled={!canMinus}
+                        className={`flex size-[36px] items-center justify-center rounded-full border-[1.947px] border-[#dddad2] font-golos text-[19px] font-semibold transition-colors ${
+                          canMinus
+                            ? "cursor-pointer text-[#3f3f46] hover:bg-black/5"
+                            : "cursor-not-allowed text-[#c9c6bd]"
+                        }`}
+                        onClick={() => changeSeat(s.key, -1)}
+                      >
+                        −
+                      </button>
+                      <span className="w-[20px] text-center font-golos text-[18px] font-bold text-ink">
+                        {qty}
+                      </span>
+                      <button
+                        type="button"
+                        aria-label={`Повече · ${s.label}`}
+                        disabled={!canPlus}
+                        className={`flex size-[36px] items-center justify-center rounded-full font-golos text-[19px] font-semibold text-offwhite transition-colors ${
+                          canPlus
+                            ? "cursor-pointer bg-forest hover:bg-pine"
+                            : "cursor-not-allowed bg-[#dddad2]"
+                        }`}
+                        onClick={() => changeSeat(s.key, 1)}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
                 );
               })}
-            </div>
-
-            {/* Брой места за избрания вид седалка */}
-            <div className="mt-[16px] flex items-center justify-between rounded-[15.099px] bg-[rgba(161,161,170,0.12)] px-[20px] py-[14px]">
-              <div className="flex flex-col">
-                <span className="font-golos text-[15px] font-semibold text-ink">
-                  Брой места
-                </span>
-                <span className="font-golos text-[12.5px] text-[#a1a1aa]">
-                  {seatLabel(seatType)} · макс. {seatFreeForSelected}
-                </span>
-              </div>
-              <div className="flex items-center gap-[16px]">
-                <button
-                  type="button"
-                  aria-label="По-малко места"
-                  disabled={places <= 1}
-                  className={`flex size-[40px] items-center justify-center rounded-full border-[1.947px] border-[#dddad2] font-golos text-[20px] font-semibold transition-colors ${
-                    places <= 1
-                      ? "cursor-not-allowed text-[#c9c6bd]"
-                      : "cursor-pointer text-[#3f3f46] hover:bg-black/5"
-                  }`}
-                  onClick={() => changePlaces(-1)}
-                >
-                  −
-                </button>
-                <span className="w-[24px] text-center font-golos text-[20px] font-bold text-ink">
-                  {places}
-                </span>
-                <button
-                  type="button"
-                  aria-label="Повече места"
-                  disabled={places >= seatFreeForSelected}
-                  className={`flex size-[40px] items-center justify-center rounded-full font-golos text-[20px] font-semibold text-offwhite transition-colors ${
-                    places >= seatFreeForSelected
-                      ? "cursor-not-allowed bg-[#dddad2]"
-                      : "cursor-pointer bg-forest hover:bg-pine"
-                  }`}
-                  onClick={() => changePlaces(1)}
-                >
-                  +
-                </button>
-              </div>
             </div>
 
             <div className="mt-[18px]">
@@ -749,11 +734,13 @@ function Modal({
                   : ""}
               </div>
               <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
-                {selectedSlot} ч · {places}{" "}
-                {places === 1 ? "място" : "места"}
+                {selectedSlot} ч · {totalSelected}{" "}
+                {totalSelected === 1 ? "място" : "места"}
               </div>
-              <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
-                Седалка: {seatLabel(seatType)}
+              <div className="flex min-h-[55px] items-center rounded-[10px] bg-white px-[17px] py-[10px] font-golos text-[15px] tracking-[-0.15px] text-black">
+                {SEAT_TYPES.filter((s) => seatQty[s.key] > 0)
+                  .map((s) => `${s.label} × ${seatQty[s.key]}`)
+                  .join(" · ")}
               </div>
               <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
                 {ticketsSummary}
