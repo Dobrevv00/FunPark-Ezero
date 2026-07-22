@@ -4,12 +4,16 @@
  * ще бъдат заменени с API извиквания, без промяна по компонентите.
  */
 
+/** Брой места по вид седалка в една резервация */
+export type SeatCounts = { light: number; mid: number; heavy: number };
+
 export type BookingRecord = {
   id: string;
   dateKey: string; // "2026-08-20"
   dateLabel: string; // "20 август 2026"
   time: string;
-  places: number; // брой резервирани места за този час
+  seats: SeatCounts; // брой места по вид седалка
+  places: number; // общо места (сумата от seats)
   name: string;
   phone: string;
   email: string;
@@ -19,6 +23,29 @@ export type BookingRecord = {
   total: number;
   createdAt: string;
 };
+
+/**
+ * Видове седалки и наличност на сесия (общо 20 места на час).
+ * Всеки вид се следи отделно — заета седалка от даден вид не е достъпна за
+ * други за същия час.
+ */
+export const SEAT_TYPES = [
+  { key: "light", label: "До 30 кг", cap: 1 },
+  { key: "mid", label: "От 30 до 60 кг", cap: 14 },
+  { key: "heavy", label: "От 60 до 140 кг", cap: 5 },
+] as const;
+
+export type SeatKey = (typeof SEAT_TYPES)[number]["key"];
+
+export const emptySeats = (): SeatCounts => ({ light: 0, mid: 0, heavy: 0 });
+
+export const seatsTotal = (s: SeatCounts) => s.light + s.mid + s.heavy;
+
+export const seatLabel = (key: string) =>
+  SEAT_TYPES.find((s) => s.key === key)?.label ?? key;
+
+export const seatCap = (key: string) =>
+  SEAT_TYPES.find((s) => s.key === key)?.cap ?? 0;
 
 const BOOKINGS_KEY = "fpe-bookings";
 const SLOTS_KEY = "fpe-slots";
@@ -56,6 +83,38 @@ export function saveBooking(record: BookingRecord) {
     JSON.stringify([...getBookings(), record])
   );
   emitChange();
+}
+
+/**
+ * Атомарно записване с финална проверка на наличността.
+ * Чете най-актуалните данни в момента на записа (не остаряло състояние),
+ * така че при едновременни опити само първият успява — вторият вижда, че
+ * вече няма достатъчно места. Синхронният read→check→write минимизира
+ * прозореца за конфликт при споделен localStorage между табове.
+ * Заменя се с транзакция/условен запис при свързване с Payload CMS.
+ */
+export function tryBook(
+  record: BookingRecord
+): { ok: true; free: number } | { ok: false; free: number; reason: "full" | "blocked" } {
+  const fresh = getBookings();
+  if (isSlotBlocked(record.dateKey, record.time)) {
+    return { ok: false, free: 0, reason: "blocked" };
+  }
+  // наличност за избрания вид седалка
+  const seatFree =
+    seatCap(record.seatType) -
+    countSeat(fresh, record.dateKey, record.time, record.seatType);
+  // общ капацитет за часа (може да е ограничен от админа)
+  const totalFree =
+    getCapacityFor(record.dateKey, record.time) -
+    countBookings(fresh, record.dateKey, record.time);
+  const free = Math.max(0, Math.min(seatFree, totalFree));
+  if (record.places > free) {
+    return { ok: false, free, reason: "full" };
+  }
+  localStorage.setItem(BOOKINGS_KEY, JSON.stringify([...fresh, record]));
+  emitChange();
+  return { ok: true, free: free - record.places };
 }
 
 export function updateBooking(record: BookingRecord) {
@@ -186,6 +245,20 @@ export function countBookings(
 ) {
   return bookings
     .filter((b) => b.dateKey === dateKey && b.time === time)
+    .reduce((sum, b) => sum + (b.places ?? 1), 0);
+}
+
+/** Заетите места за конкретен вид седалка за дата+час */
+export function countSeat(
+  bookings: BookingRecord[],
+  dateKey: string,
+  time: string,
+  seatType: string
+) {
+  return bookings
+    .filter(
+      (b) => b.dateKey === dateKey && b.time === time && b.seatType === seatType
+    )
     .reduce((sum, b) => sum + (b.places ?? 1), 0);
 }
 

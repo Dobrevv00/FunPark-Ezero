@@ -13,6 +13,7 @@ import {
   getSlots,
   removeBlock,
   removeCapacityOverride,
+  seatLabel,
   setCapacityFor,
   subscribeToStore,
   updateBooking,
@@ -419,6 +420,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     <th className="py-[10px] pr-[12px]">Дата</th>
                     <th className="py-[10px] pr-[12px]">Час</th>
                     <th className="py-[10px] pr-[12px]">Места</th>
+                    <th className="py-[10px] pr-[12px]">Седалка</th>
                     <th className="py-[10px] pr-[12px]">Име</th>
                     <th className="py-[10px] pr-[12px]">Телефон</th>
                     <th className="py-[10px] pr-[12px]">Имейл</th>
@@ -483,6 +485,9 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                           ) : (
                             (b.places ?? 1)
                           )}
+                        </td>
+                        <td className="py-[12px] pr-[12px] whitespace-nowrap">
+                          {b.seatType ? seatLabel(b.seatType) : "—"}
                         </td>
                         <td className="py-[12px] pr-[12px]">
                           {isEditing ? (

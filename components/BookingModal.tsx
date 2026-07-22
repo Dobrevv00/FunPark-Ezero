@@ -16,13 +16,17 @@ import {
   weekdays,
 } from "./calendarData";
 import {
+  SEAT_TYPES,
   countBookings,
+  countSeat,
   getBlockedDaySet,
   getBookings,
   getCapacityFor,
   getSlots,
   isSlotBlocked,
-  saveBooking,
+  seatCap,
+  seatLabel,
+  tryBook,
   type BookingRecord,
 } from "@/lib/bookingStore";
 import { isValidBgPhone, isValidEmail } from "@/lib/validation";
@@ -99,6 +103,8 @@ function Modal({
     return s.includes("10:30") ? "10:30" : (s[0] ?? "");
   });
   const [places, setPlaces] = useState(1);
+  const [seatType, setSeatType] = useState<string>(SEAT_TYPES[1].key);
+  const [availabilityError, setAvailabilityError] = useState("");
 
   const slotRows = useMemo(() => {
     const rows: string[][] = [];
@@ -114,18 +120,34 @@ function Modal({
   const capacityForTime = (time: string) =>
     dateKey ? getCapacityFor(dateKey, time) : 20;
 
+  // свободни места за конкретен вид седалка за даден час (ограничени и от общия капацитет)
+  const seatFree = (time: string, seat: string) => {
+    const bySeat = seatCap(seat) - countSeat(bookings, dateKey, time, seat);
+    const totalFree = capacityForTime(time) - countFor(time);
+    return Math.max(0, Math.min(bySeat, totalFree));
+  };
+
   const selectedCapacity = capacityForTime(selectedSlot);
   const freeForSelected = selectedCapacity - countFor(selectedSlot);
+  const seatFreeForSelected = seatFree(selectedSlot, seatType);
 
-  // избор на час + свеждане на броя места до свободните за него (поне 1)
+  // избор на час + свеждане на броя места до свободните за избрания вид седалка
   const pickSlot = (time: string) => {
     setSelectedSlot(time);
-    const free = capacityForTime(time) - countFor(time);
-    setPlaces((p) => Math.max(1, Math.min(p, free)));
+    setAvailabilityError("");
+    const free = seatFree(time, seatType);
+    setPlaces((p) => Math.max(1, Math.min(p, Math.max(1, free))));
+  };
+
+  const pickSeat = (seat: string) => {
+    setSeatType(seat);
+    setAvailabilityError("");
+    const free = seatFree(selectedSlot, seat);
+    setPlaces((p) => Math.max(1, Math.min(p, Math.max(1, free))));
   };
 
   const changePlaces = (delta: number) =>
-    setPlaces((p) => Math.max(1, Math.min(freeForSelected, p + delta)));
+    setPlaces((p) => Math.max(1, Math.min(seatFreeForSelected, p + delta)));
 
   const goForward = () => {
     if (step === 4 && selectedDate) {
@@ -134,6 +156,7 @@ function Modal({
         dateKey,
         dateLabel: `${selectedDate.d} ${monthNamesLower[selectedDate.m]} ${selectedDate.y}`,
         time: selectedSlot,
+        seatType,
         places,
         name: form.name.trim(),
         phone: form.phone.trim(),
@@ -144,8 +167,23 @@ function Modal({
         total: totalPrice,
         createdAt: new Date().toISOString(),
       };
-      saveBooking(record);
-      setBookings((b) => [...b, record]);
+      // Финална проверка на наличността в момента на записа (мярка срещу
+      // едновременни резервации на последните места).
+      const result = tryBook(record);
+      setBookings(getBookings());
+      if (!result.ok) {
+        setAvailabilityError(
+          result.reason === "blocked"
+            ? `Часът ${selectedSlot} вече не е достъпен. Моля, изберете друг.`
+            : `Съжаляваме, за ${selectedSlot} · „${seatLabel(seatType)}“ останаха само ${result.free} ${
+                result.free === 1 ? "свободно място" : "свободни места"
+              }. Моля, коригирайте броя или изберете друг вид/час.`
+        );
+        setPlaces((p) => Math.max(1, Math.min(p, result.free || 1)));
+        setStep(2);
+        return;
+      }
+      setAvailabilityError("");
     }
     if (step < 5) setStep(step + 1);
   };
@@ -194,7 +232,7 @@ function Modal({
         ? selectedSlot !== "" &&
           !isSlotBlocked(dateKey, selectedSlot) &&
           places >= 1 &&
-          places <= freeForSelected
+          places <= seatFreeForSelected
         : step === 3
           ? totalCount > 0
           : form.name.trim() !== "" &&
@@ -216,34 +254,6 @@ function Modal({
   ]
     .filter(Boolean)
     .join(" · ");
-
-  const addToCalendar = () => {
-    if (!selectedDate) return;
-    const [hh, mm] = selectedSlot.split(":").map(Number);
-    const start = new Date(selectedDate.y, selectedDate.m, selectedDate.d, hh, mm);
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-    const f = (dt: Date) =>
-      `${dt.getFullYear()}${String(dt.getMonth() + 1).padStart(2, "0")}${String(dt.getDate()).padStart(2, "0")}T${String(dt.getHours()).padStart(2, "0")}${String(dt.getMinutes()).padStart(2, "0")}00`;
-    const ics = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Fun Park Ezero//BG",
-      "BEGIN:VEVENT",
-      `UID:${reservationNo}@funparkezero.bg`,
-      `DTSTART:${f(start)}`,
-      `DTEND:${f(end)}`,
-      "SUMMARY:Fun Park Ezero — Въжено съоръжение",
-      `DESCRIPTION:Резервация № ${reservationNo} · ${ticketsSummary} · ${totalPrice} лв`,
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ].join("\r\n");
-    const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${reservationNo}.ics`;
-    a.click();
-    URL.revokeObjectURL(url);
-  };
 
   const titles = [
     "Изберете дата",
@@ -419,6 +429,11 @@ function Modal({
                 {shortDateLabel}
               </p>
             )}
+            {availabilityError && (
+              <p className="mb-[12px] rounded-[9px] bg-red-50 px-[14px] py-[8px] text-center font-golos text-[13px] font-medium text-red-600">
+                {availabilityError}
+              </p>
+            )}
             <p className="mb-[18px] min-h-[18px] text-center font-golos text-[12.5px] leading-[1.45] text-[#3f3f46]">
               {selectedSlot
                 ? `Свободни места за ${selectedSlot}: ${freeForSelected} от ${selectedCapacity}`
@@ -461,14 +476,71 @@ function Modal({
               ))}
             </div>
 
-            {/* Брой места за избрания час */}
-            <div className="mt-[20px] flex items-center justify-between rounded-[15.099px] bg-[rgba(161,161,170,0.12)] px-[20px] py-[14px]">
+            {/* Вид седалка */}
+            <div className="mt-[20px] flex flex-col gap-[10px]">
+              <span className="font-golos text-[15px] font-semibold text-ink">
+                Вид седалка
+              </span>
+              {SEAT_TYPES.map((s) => {
+                const free = seatFree(selectedSlot, s.key);
+                const active = seatType === s.key;
+                const soldOut = free === 0;
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    disabled={soldOut}
+                    onClick={() => pickSeat(s.key)}
+                    className={`flex items-center justify-between rounded-[12px] border px-[16px] py-[12px] text-left transition-colors ${
+                      soldOut
+                        ? "cursor-not-allowed border-[#eceae4] bg-[#f6f5f2] text-[#c9c6bd]"
+                        : active
+                          ? "cursor-pointer border-forest bg-[rgba(23,87,59,0.06)]"
+                          : "cursor-pointer border-[#dddad2] hover:border-forest"
+                    }`}
+                  >
+                    <span className="flex items-center gap-[10px]">
+                      <span
+                        className={`flex size-[18px] items-center justify-center rounded-full border-[2px] ${
+                          active && !soldOut
+                            ? "border-forest"
+                            : "border-[#c9c6bd]"
+                        }`}
+                      >
+                        {active && !soldOut && (
+                          <span className="size-[9px] rounded-full bg-forest" />
+                        )}
+                      </span>
+                      <span
+                        className={`font-golos text-[15px] font-semibold ${
+                          soldOut ? "text-[#c9c6bd]" : "text-ink"
+                        }`}
+                      >
+                        {s.label}
+                      </span>
+                    </span>
+                    <span className="font-golos text-[13px] font-medium">
+                      {soldOut ? (
+                        <span className="text-[#c9c6bd]">Заето</span>
+                      ) : (
+                        <span className="text-forest">
+                          {free} свободни
+                        </span>
+                      )}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Брой места за избрания вид седалка */}
+            <div className="mt-[16px] flex items-center justify-between rounded-[15.099px] bg-[rgba(161,161,170,0.12)] px-[20px] py-[14px]">
               <div className="flex flex-col">
                 <span className="font-golos text-[15px] font-semibold text-ink">
                   Брой места
                 </span>
                 <span className="font-golos text-[12.5px] text-[#a1a1aa]">
-                  за {selectedSlot} · макс. {freeForSelected}
+                  {seatLabel(seatType)} · макс. {seatFreeForSelected}
                 </span>
               </div>
               <div className="flex items-center gap-[16px]">
@@ -491,9 +563,9 @@ function Modal({
                 <button
                   type="button"
                   aria-label="Повече места"
-                  disabled={places >= freeForSelected}
+                  disabled={places >= seatFreeForSelected}
                   className={`flex size-[40px] items-center justify-center rounded-full font-golos text-[20px] font-semibold text-offwhite transition-colors ${
-                    places >= freeForSelected
+                    places >= seatFreeForSelected
                       ? "cursor-not-allowed bg-[#dddad2]"
                       : "cursor-pointer bg-forest hover:bg-pine"
                   }`}
@@ -681,6 +753,9 @@ function Modal({
                 {places === 1 ? "място" : "места"}
               </div>
               <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
+                Седалка: {seatLabel(seatType)}
+              </div>
+              <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
                 {ticketsSummary}
               </div>
               <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[14px] font-golos text-[16px] tracking-[-0.15px] text-black">
@@ -698,22 +773,13 @@ function Modal({
         {/* Долни бутони */}
         <div className="mt-auto flex items-center justify-between gap-[16px] px-[24px] pb-[30px] pt-[24px] sm:px-[51px]">
           {step === 5 ? (
-            <>
-              <button
-                type="button"
-                className="flex w-[259px] max-w-[45%] cursor-pointer items-center justify-center rounded-[10px] px-[24px] py-[10px] font-golos text-[15px] text-black transition-colors hover:bg-black/5"
-                onClick={onClose}
-              >
-                Обратно към Начало
-              </button>
-              <button
-                type="button"
-                className="flex w-[259px] max-w-[55%] cursor-pointer items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f]"
-                onClick={addToCalendar}
-              >
-                Добави в календара
-              </button>
-            </>
+            <button
+              type="button"
+              className="mx-auto flex w-[259px] max-w-full cursor-pointer items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f]"
+              onClick={onClose}
+            >
+              Обратно към Начало
+            </button>
           ) : (
             <>
               {step > 1 ? (
