@@ -12,6 +12,7 @@ import {
   getCapacityOverrides,
   getSlots,
   SEAT_TYPES,
+  confirmBooking,
   removeBlock,
   removeCapacityOverride,
   setCapacityFor,
@@ -427,6 +428,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                     <th className="py-[10px] pr-[12px]">Билети</th>
                     <th className="py-[10px] pr-[12px]">Сума</th>
                     <th className="py-[10px] pr-[12px]">Направена на</th>
+                    <th className="py-[10px] pr-[12px]">Статус</th>
                     <th className="py-[10px]" />
                   </tr>
                 </thead>
@@ -549,8 +551,23 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                             timeStyle: "short",
                           })}
                         </td>
+                        <td className="py-[12px] pr-[12px] whitespace-nowrap">
+                          {b.confirmed ? (
+                            <span className="inline-flex items-center gap-[5px] rounded-full bg-[rgba(106,142,78,0.15)] px-[10px] py-[4px] text-[12px] font-semibold text-forest">
+                              ✓ Потвърдена
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-full bg-[rgba(244,198,63,0.2)] px-[10px] py-[4px] text-[12px] font-semibold text-[#8a6d1a]">
+                              Чакаща
+                            </span>
+                          )}
+                        </td>
                         <td className="py-[12px]">
-                          {isEditing ? (
+                          {b.confirmed ? (
+                            <span className="text-[12px] text-[#a1a1aa]">
+                              🔒 Заключена
+                            </span>
+                          ) : isEditing ? (
                             <div className="flex flex-col gap-[6px]">
                               <button
                                 type="button"
@@ -574,6 +591,13 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                             </div>
                           ) : (
                             <div className="flex flex-col gap-[6px]">
+                              <button
+                                type="button"
+                                className="cursor-pointer rounded-[8px] bg-forest px-[12px] py-[5px] text-[12px] font-semibold text-white transition-colors hover:bg-pine"
+                                onClick={() => confirmBooking(b.id)}
+                              >
+                                Потвърди
+                              </button>
                               <button
                                 type="button"
                                 className="cursor-pointer rounded-[8px] border border-[#dddad2] px-[12px] py-[5px] text-[12px] font-semibold text-[#3f3f46] transition-colors hover:border-forest hover:text-forest"

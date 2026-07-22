@@ -22,6 +22,7 @@ export type BookingRecord = {
   small: number;
   total: number;
   createdAt: string;
+  confirmed?: boolean; // потвърдена от администратор — заключена за промяна/изтриване
 };
 
 /**
@@ -126,7 +127,12 @@ export function tryBook(
 export function updateBooking(record: BookingRecord) {
   localStorage.setItem(
     BOOKINGS_KEY,
-    JSON.stringify(getBookings().map((b) => (b.id === record.id ? record : b)))
+    JSON.stringify(
+      // потвърдените резервации не се променят
+      getBookings().map((b) =>
+        b.id === record.id && !b.confirmed ? record : b
+      )
+    )
   );
   emitChange();
 }
@@ -134,7 +140,19 @@ export function updateBooking(record: BookingRecord) {
 export function deleteBooking(id: string) {
   localStorage.setItem(
     BOOKINGS_KEY,
-    JSON.stringify(getBookings().filter((b) => b.id !== id))
+    // потвърдените резервации не се изтриват (запазват се, ако id съвпада, но е потвърдена)
+    JSON.stringify(getBookings().filter((b) => b.id !== id || b.confirmed))
+  );
+  emitChange();
+}
+
+/** Потвърждаване на резервация — след това е заключена за промяна/изтриване */
+export function confirmBooking(id: string) {
+  localStorage.setItem(
+    BOOKINGS_KEY,
+    JSON.stringify(
+      getBookings().map((b) => (b.id === id ? { ...b, confirmed: true } : b))
+    )
   );
   emitChange();
 }
