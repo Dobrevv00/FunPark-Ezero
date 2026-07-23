@@ -25,7 +25,7 @@ import {
   getCapacityFor,
   getSlots,
   isSlotBlocked,
-  seatCap,
+  seatCapFor,
   seatLabel,
   seatsTotal,
   tryBook,
@@ -123,14 +123,29 @@ function Modal({
   const capacityForTime = (time: string) =>
     dateKey ? getCapacityFor(dateKey, time) : 20;
 
+  // час, чието начало вече е минало (само за днешна дата) → неактивен
+  const isSlotPast = (time: string) => {
+    if (!selectedDate) return false;
+    const [hh, mm] = time.split(":").map(Number);
+    const slotStart = new Date(
+      selectedDate.y,
+      selectedDate.m,
+      selectedDate.d,
+      hh,
+      mm
+    );
+    return slotStart.getTime() <= now.getTime();
+  };
+
   const selectedCapacity = capacityForTime(selectedSlot);
   const totalSelected = seatsTotal(seatQty);
 
   // вече заети места от други за даден вид седалка
   const seatTaken = (seat: SeatKey) =>
     countSeat(bookings, dateKey, selectedSlot, seat);
-  // свободни за вид (капацитет на вида минус заетите)
-  const seatFree = (seat: SeatKey) => Math.max(0, seatCap(seat) - seatTaken(seat));
+  // свободни за вид (капацитет на вида за деня/часа минус заетите)
+  const seatFree = (seat: SeatKey) =>
+    Math.max(0, seatCapFor(dateKey, selectedSlot, seat) - seatTaken(seat));
   // общо оставащи места за часа (спрямо капацитета) минус вече избраните в тази резервация
   const totalRemaining =
     selectedCapacity - countFor(selectedSlot) - totalSelected;
@@ -240,6 +255,7 @@ function Modal({
       : step === 2
         ? selectedSlot !== "" &&
           !isSlotBlocked(dateKey, selectedSlot) &&
+          !isSlotPast(selectedSlot) &&
           totalSelected >= 1 &&
           SEAT_TYPES.every((s) => seatQty[s.key] <= seatFree(s.key)) &&
           totalSelected <= selectedCapacity - countFor(selectedSlot)
@@ -455,12 +471,19 @@ function Modal({
                   {row.map((time) => {
                     const isSelected = selectedSlot === time;
                     const blocked = isSlotBlocked(dateKey, time);
+                    const past = isSlotPast(time);
                     const isFull = countFor(time) >= capacityForTime(time);
-                    if (blocked || isFull) {
+                    if (blocked || past || isFull) {
                       return (
                         <span
                           key={time}
-                          title={blocked ? "Блокиран час" : "Няма свободни места"}
+                          title={
+                            past
+                              ? "Часът вече е минал"
+                              : blocked
+                                ? "Блокиран час"
+                                : "Няма свободни места"
+                          }
                           className="flex flex-1 items-center justify-center rounded-[15.099px] bg-[#f0eee8] py-[15.099px] font-golos text-[17.616px] font-semibold text-[#c9c6bd] line-through"
                         >
                           {time}

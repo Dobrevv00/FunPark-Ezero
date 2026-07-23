@@ -38,15 +38,19 @@ export const SEAT_TYPES = [
 
 export type SeatKey = (typeof SEAT_TYPES)[number]["key"];
 
+/** Капацитети по подразбиране за всеки вид седалка */
+const DEFAULT_SEAT_CAPS: Record<SeatKey, number> = {
+  light: 1,
+  mid: 14,
+  heavy: 5,
+};
+
 export const emptySeats = (): SeatCounts => ({ light: 0, mid: 0, heavy: 0 });
 
 export const seatsTotal = (s: SeatCounts) => s.light + s.mid + s.heavy;
 
 export const seatLabel = (key: string) =>
   SEAT_TYPES.find((s) => s.key === key)?.label ?? key;
-
-export const seatCap = (key: string) =>
-  SEAT_TYPES.find((s) => s.key === key)?.cap ?? 0;
 
 const BOOKINGS_KEY = "fpe-bookings";
 const SLOTS_KEY = "fpe-slots";
@@ -107,7 +111,9 @@ export function tryBook(
   for (const st of SEAT_TYPES) {
     const want = record.seats[st.key] ?? 0;
     if (want <= 0) continue;
-    const free = st.cap - countSeat(fresh, record.dateKey, record.time, st.key);
+    const free =
+      seatCapFor(record.dateKey, record.time, st.key) -
+      countSeat(fresh, record.dateKey, record.time, st.key);
     if (want > free) {
       return { ok: false, reason: "full", seat: st.key, free: Math.max(0, free) };
     }
@@ -173,15 +179,29 @@ export function setSlots(slots: string[]) {
 }
 
 /**
- * Персонализиран капацитет.
- * Ключ за цял ден: "2026-08-15" → места на час за всеки час този ден.
- * Ключ за конкретен час: "2026-08-15|14:00" → места само за този час (има предимство).
+ * Персонализиран капацитет по видове седалки.
+ * Ключ за цял ден: "2026-08-15" → брой места по вид за всеки час този ден.
+ * Ключ за конкретен час: "2026-08-15|14:00" → само за този час (има предимство).
+ * Общият капацитет на часа е сборът от трите вида.
  */
-export function getCapacityOverrides(): Record<string, number> {
+const isSeatCounts = (v: unknown): v is SeatCounts =>
+  !!v &&
+  typeof v === "object" &&
+  Number.isFinite((v as SeatCounts).light) &&
+  Number.isFinite((v as SeatCounts).mid) &&
+  Number.isFinite((v as SeatCounts).heavy);
+
+export function getCapacityOverrides(): Record<string, SeatCounts> {
   if (typeof window === "undefined") return {};
   try {
     const raw = JSON.parse(localStorage.getItem(CAPACITY_KEY) ?? "{}");
-    return raw && typeof raw === "object" ? raw : {};
+    if (!raw || typeof raw !== "object") return {};
+    // пропускаме стари/невалидни записи (напр. от предишен формат с число)
+    const out: Record<string, SeatCounts> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (isSeatCounts(v)) out[k] = v as SeatCounts;
+    }
+    return out;
   } catch {
     return {};
   }
@@ -190,21 +210,38 @@ export function getCapacityOverrides(): Record<string, number> {
 export const capacityKey = (dateKey: string, time?: string | null) =>
   time ? `${dateKey}|${time}` : dateKey;
 
-/** Капацитет за конкретни дата и час — часов override › дневен override › по подразбиране */
-export function getCapacityFor(dateKey: string, time?: string | null): number {
+/** Места по видове седалки за дата+час — часов override › дневен override › по подразбиране */
+export function getSeatCapsFor(
+  dateKey: string,
+  time?: string | null
+): SeatCounts {
   const o = getCapacityOverrides();
-  if (time && o[`${dateKey}|${time}`] != null) return o[`${dateKey}|${time}`];
-  if (o[dateKey] != null) return o[dateKey];
-  return SLOT_CAPACITY;
+  if (time && o[`${dateKey}|${time}`]) return o[`${dateKey}|${time}`];
+  if (o[dateKey]) return o[dateKey];
+  return { ...DEFAULT_SEAT_CAPS };
+}
+
+/** Капацитет на конкретен вид седалка за дата+час */
+export function seatCapFor(
+  dateKey: string,
+  time: string | null,
+  key: SeatKey
+): number {
+  return getSeatCapsFor(dateKey, time)[key] ?? 0;
+}
+
+/** Общ капацитет за дата+час = сборът от трите вида места */
+export function getCapacityFor(dateKey: string, time?: string | null): number {
+  return seatsTotal(getSeatCapsFor(dateKey, time));
 }
 
 export function setCapacityFor(
   dateKey: string,
   time: string | null,
-  capacity: number
+  seats: SeatCounts
 ) {
   const overrides = getCapacityOverrides();
-  overrides[capacityKey(dateKey, time)] = capacity;
+  overrides[capacityKey(dateKey, time)] = seats;
   localStorage.setItem(CAPACITY_KEY, JSON.stringify(overrides));
   emitChange();
 }

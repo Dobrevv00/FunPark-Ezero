@@ -15,10 +15,13 @@ import {
   confirmBooking,
   removeBlock,
   removeCapacityOverride,
+  seatsTotal,
   setCapacityFor,
   subscribeToStore,
   updateBooking,
   type BookingRecord,
+  type SeatCounts,
+  type SeatKey,
 } from "@/lib/bookingStore";
 import { AUTH_KEY, isAdminAuthed } from "@/lib/adminAuth";
 import { monthNamesLower } from "@/components/calendarData";
@@ -55,11 +58,15 @@ const inputCls =
   "h-[34px] w-full rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40";
 
 function CapacitySection() {
-  const [overrides, setOverrides] = useState<Record<string, number>>({});
+  const [overrides, setOverrides] = useState<Record<string, SeatCounts>>({});
   const [slots, setSlotsState] = useState<string[]>([]);
   const [capDate, setCapDate] = useState("");
   const [capTime, setCapTime] = useState(""); // "" = целият ден
-  const [capValue, setCapValue] = useState<number>(SLOT_CAPACITY);
+  const [capSeats, setCapSeats] = useState<SeatCounts>({
+    light: 1,
+    mid: 14,
+    heavy: 5,
+  });
   const [capError, setCapError] = useState("");
 
   useEffect(() => {
@@ -71,20 +78,22 @@ function CapacitySection() {
     return subscribeToStore(refresh);
   }, []);
 
+  const capTotal = seatsTotal(capSeats);
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(capDate)) {
       setCapError("Изберете дата.");
       return;
     }
-    if (!Number.isFinite(capValue) || capValue < 0 || capValue > 200) {
-      setCapError("Въведете брой между 0 и 200.");
+    if (capTotal <= 0) {
+      setCapError("Общият брой места трябва да е поне 1.");
       return;
     }
-    setCapacityFor(capDate, capTime || null, capValue);
+    setCapacityFor(capDate, capTime || null, capSeats);
     setCapDate("");
     setCapTime("");
-    setCapValue(SLOT_CAPACITY);
+    setCapSeats({ light: 1, mid: 14, heavy: 5 });
     setCapError("");
   };
 
@@ -98,8 +107,10 @@ function CapacitySection() {
         Капацитет по дни
       </h2>
       <p className="mt-[4px] text-[13px] text-[#545454]">
-        По подразбиране всеки ден има {SLOT_CAPACITY} свободни места на час. Тук
-        можете да зададете различен брой за цял ден или само за определен час.
+        По подразбиране всеки ден има {SLOT_CAPACITY} места на час (
+        {SEAT_TYPES.map((s) => `${s.label} — ${s.cap}`).join(", ")}). Тук можете
+        да зададете различен брой места по видове седалки за цял ден или само за
+        определен час. Общият капацитет е сборът от видовете.
       </p>
 
       <form onSubmit={submit} className="mt-[16px] flex flex-wrap items-end gap-[12px]">
@@ -130,20 +141,32 @@ function CapacitySection() {
             ))}
           </select>
         </label>
-        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
-          Места
-          <input
-            type="number"
-            min={0}
-            max={200}
-            value={capValue}
-            onChange={(e) => {
-              setCapValue(Number(e.target.value));
-              setCapError("");
-            }}
-            className={`${inputCls} w-[90px]`}
-          />
-        </label>
+        {SEAT_TYPES.map((s) => (
+          <label
+            key={s.key}
+            className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]"
+          >
+            {s.label}
+            <input
+              type="number"
+              min={0}
+              max={200}
+              value={capSeats[s.key]}
+              onChange={(e) => {
+                const v = Math.max(0, Number(e.target.value) || 0);
+                setCapSeats((c) => ({ ...c, [s.key]: v }));
+                setCapError("");
+              }}
+              className={`${inputCls} w-[86px]`}
+            />
+          </label>
+        ))}
+        <div className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+          Общо
+          <div className="flex h-[34px] w-[70px] items-center justify-center rounded-[8px] bg-[rgba(23,87,59,0.1)] font-golos text-[14px] font-bold text-forest">
+            {capTotal}
+          </div>
+        </div>
         <button
           type="submit"
           className="h-[34px] cursor-pointer rounded-[10px] bg-sun px-[24px] text-[14px] font-semibold text-black/80 transition-colors hover:bg-[#e0b32f]"
@@ -155,8 +178,9 @@ function CapacitySection() {
 
       {entries.length > 0 && (
         <div className="mt-[20px] flex flex-wrap gap-[10px]">
-          {entries.map(([key, value]) => {
+          {entries.map(([key, seats]) => {
             const [dateKey, time] = key.split("|");
+            const total = seatsTotal(seats);
             return (
               <span
                 key={key}
@@ -167,7 +191,7 @@ function CapacitySection() {
                 </span>
                 {time && <span className="text-ink">{time} ч</span>}
                 <span className="text-forest">
-                  {value} {time ? "места" : "места/час"}
+                  {total} места ({SEAT_TYPES.map((s) => seats[s.key]).join("/")})
                 </span>
                 <button
                   type="button"
