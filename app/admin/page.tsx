@@ -57,26 +57,6 @@ type Draft = {
 const inputCls =
   "h-[34px] w-full rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40";
 
-/**
- * Разпределя общ брой места по трите вида пропорционално на текущото
- * съотношение (или по подразбиране 1:14:5), така че сборът точно да съвпадне.
- */
-function distributeSeats(total: number, base: SeatCounts): SeatCounts {
-  const keys: SeatKey[] = ["light", "mid", "heavy"];
-  const fallback = { light: 1, mid: 14, heavy: 5 };
-  const b = base.light + base.mid + base.heavy > 0 ? base : fallback;
-  const sum = b.light + b.mid + b.heavy;
-  const raw = keys.map((k) => (b[k] / sum) * total);
-  const floored = raw.map((x) => Math.floor(x));
-  let remainder = total - floored.reduce((a, c) => a + c, 0);
-  const byFrac = raw
-    .map((x, i) => ({ i, f: x - Math.floor(x) }))
-    .sort((a, c) => c.f - a.f);
-  const result = [...floored];
-  for (let j = 0; remainder > 0; j++, remainder--) result[byFrac[j % 3].i]++;
-  return { light: result[0], mid: result[1], heavy: result[2] };
-}
-
 function CapacitySection() {
   const [overrides, setOverrides] = useState<Record<string, SeatCounts>>({});
   const [slots, setSlotsState] = useState<string[]>([]);
@@ -87,6 +67,7 @@ function CapacitySection() {
     mid: 14,
     heavy: 5,
   });
+  const [capTotal, setCapTotal] = useState(20); // целеви общ брой
   const [capError, setCapError] = useState("");
 
   useEffect(() => {
@@ -98,7 +79,9 @@ function CapacitySection() {
     return subscribeToStore(refresh);
   }, []);
 
-  const capTotal = seatsTotal(capSeats);
+  const seatsSum = seatsTotal(capSeats);
+  const sumMatches = seatsSum === capTotal;
+  const canSaveCap = capTotal > 0 && sumMatches;
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,14 +89,12 @@ function CapacitySection() {
       setCapError("Изберете дата.");
       return;
     }
-    if (capTotal <= 0) {
-      setCapError("Общият брой места трябва да е поне 1.");
-      return;
-    }
+    if (!canSaveCap) return;
     setCapacityFor(capDate, capTime || null, capSeats);
     setCapDate("");
     setCapTime("");
     setCapSeats({ light: 1, mid: 14, heavy: 5 });
+    setCapTotal(20);
     setCapError("");
   };
 
@@ -189,20 +170,32 @@ function CapacitySection() {
             max={600}
             value={capTotal}
             onChange={(e) => {
-              const t = Math.max(0, Number(e.target.value) || 0);
-              setCapSeats((c) => distributeSeats(t, c));
+              setCapTotal(Math.max(0, Number(e.target.value) || 0));
               setCapError("");
             }}
-            className={`${inputCls} w-[80px] font-bold text-forest`}
+            className={`${inputCls} w-[80px] font-bold ${
+              sumMatches ? "text-forest" : "text-red-600 ring-2 ring-red-400"
+            }`}
           />
         </label>
         <button
           type="submit"
-          className="h-[34px] cursor-pointer rounded-[10px] bg-sun px-[24px] text-[14px] font-semibold text-black/80 transition-colors hover:bg-[#e0b32f]"
+          disabled={!canSaveCap}
+          className={`h-[34px] rounded-[10px] px-[24px] text-[14px] font-semibold transition-colors ${
+            canSaveCap
+              ? "cursor-pointer bg-sun text-black/80 hover:bg-[#e0b32f]"
+              : "cursor-not-allowed bg-[#e6e4de] text-[#a1a1aa]"
+          }`}
         >
           Запази
         </button>
-        {capError && <p className="text-[13px] text-red-600">{capError}</p>}
+        {capError && <p className="w-full text-[13px] text-red-600">{capError}</p>}
+        {!sumMatches && (
+          <p className="w-full text-[13px] text-red-600">
+            Сборът по видове ({seatsSum}) трябва да е равен на общия брой (
+            {capTotal}).
+          </p>
+        )}
       </form>
 
       {entries.length > 0 && (
