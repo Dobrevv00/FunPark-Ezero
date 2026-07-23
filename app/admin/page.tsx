@@ -57,6 +57,26 @@ type Draft = {
 const inputCls =
   "h-[34px] w-full rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40";
 
+/**
+ * Разпределя общ брой места по трите вида пропорционално на текущото
+ * съотношение (или по подразбиране 1:14:5), така че сборът точно да съвпадне.
+ */
+function distributeSeats(total: number, base: SeatCounts): SeatCounts {
+  const keys: SeatKey[] = ["light", "mid", "heavy"];
+  const fallback = { light: 1, mid: 14, heavy: 5 };
+  const b = base.light + base.mid + base.heavy > 0 ? base : fallback;
+  const sum = b.light + b.mid + b.heavy;
+  const raw = keys.map((k) => (b[k] / sum) * total);
+  const floored = raw.map((x) => Math.floor(x));
+  let remainder = total - floored.reduce((a, c) => a + c, 0);
+  const byFrac = raw
+    .map((x, i) => ({ i, f: x - Math.floor(x) }))
+    .sort((a, c) => c.f - a.f);
+  const result = [...floored];
+  for (let j = 0; remainder > 0; j++, remainder--) result[byFrac[j % 3].i]++;
+  return { light: result[0], mid: result[1], heavy: result[2] };
+}
+
 function CapacitySection() {
   const [overrides, setOverrides] = useState<Record<string, SeatCounts>>({});
   const [slots, setSlotsState] = useState<string[]>([]);
@@ -161,12 +181,21 @@ function CapacitySection() {
             />
           </label>
         ))}
-        <div className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
           Общо
-          <div className="flex h-[34px] w-[70px] items-center justify-center rounded-[8px] bg-[rgba(23,87,59,0.1)] font-golos text-[14px] font-bold text-forest">
-            {capTotal}
-          </div>
-        </div>
+          <input
+            type="number"
+            min={0}
+            max={600}
+            value={capTotal}
+            onChange={(e) => {
+              const t = Math.max(0, Number(e.target.value) || 0);
+              setCapSeats((c) => distributeSeats(t, c));
+              setCapError("");
+            }}
+            className={`${inputCls} w-[80px] font-bold text-forest`}
+          />
+        </label>
         <button
           type="submit"
           className="h-[34px] cursor-pointer rounded-[10px] bg-sun px-[24px] text-[14px] font-semibold text-black/80 transition-colors hover:bg-[#e0b32f]"
@@ -323,6 +352,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [bookings, setBookings] = useState<BookingRecord[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
   useEffect(() => {
     const refresh = () => setBookings(getBookings());
@@ -382,8 +412,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   };
 
   const numberInput = (key: "adult" | "child" | "small", label: string) => (
-    <label className="flex items-center gap-[6px] text-[12px] text-[#545454]">
-      <span className="w-[38px]">{label}</span>
+    <label className="flex items-center gap-[8px] text-[12px] text-[#545454]">
+      <span className="w-[42px] shrink-0">{label}</span>
       <input
         type="number"
         min={0}
@@ -392,7 +422,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         onChange={(e) =>
           setField(key, Math.max(0, Math.min(20, Number(e.target.value) || 0)))
         }
-        className={`${inputCls} w-[58px]`}
+        className="h-[34px] w-[76px] shrink-0 rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40"
       />
     </label>
   );
@@ -618,7 +648,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                               <button
                                 type="button"
                                 className="cursor-pointer rounded-[8px] bg-forest px-[12px] py-[5px] text-[12px] font-semibold text-white transition-colors hover:bg-pine"
-                                onClick={() => confirmBooking(b.id)}
+                                onClick={() => setConfirmId(b.id)}
                               >
                                 Потвърди
                               </button>
@@ -648,6 +678,49 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           )}
         </section>
       </main>
+
+      {/* Попъп за потвърждение */}
+      {confirmId && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-[16px]"
+          onClick={() => setConfirmId(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-[400px] max-w-full rounded-[10px] bg-offwhite p-[28px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.2)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-golos text-[18px] font-bold text-ink">
+              Потвърждаване на резервация
+            </h3>
+            <p className="mt-[8px] text-[14px] leading-[1.4] text-[#545454]">
+              Сигурни ли сте, че искате да потвърдите резервация{" "}
+              <span className="font-semibold text-forest">{confirmId}</span>?
+              След потвърждаване тя не може да бъде променяна или изтривана.
+            </p>
+            <div className="mt-[24px] flex justify-end gap-[10px]">
+              <button
+                type="button"
+                className="cursor-pointer rounded-[10px] border border-[#dddad2] px-[20px] py-[9px] text-[14px] font-semibold text-[#3f3f46] transition-colors hover:bg-black/5"
+                onClick={() => setConfirmId(null)}
+              >
+                Откажи
+              </button>
+              <button
+                type="button"
+                className="cursor-pointer rounded-[10px] bg-forest px-[20px] py-[9px] text-[14px] font-semibold text-white transition-colors hover:bg-pine"
+                onClick={() => {
+                  confirmBooking(confirmId);
+                  setConfirmId(null);
+                }}
+              >
+                Да, потвърди
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
