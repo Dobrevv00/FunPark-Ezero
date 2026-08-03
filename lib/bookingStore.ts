@@ -54,6 +54,7 @@ export const seatLabel = (key: string) =>
 
 const BOOKINGS_KEY = "fpe-bookings";
 const SLOTS_KEY = "fpe-slots";
+const DAY_SLOTS_KEY = "fpe-day-slots";
 const CAPACITY_KEY = "fpe-capacity";
 const BLOCKED_KEY = "fpe-blocked";
 
@@ -176,6 +177,128 @@ export function getSlots(): string[] {
 export function setSlots(slots: string[]) {
   localStorage.setItem(SLOTS_KEY, JSON.stringify(slots));
   emitChange();
+}
+
+/** Валиден ли е часът във формат "HH:MM" (00:00 – 23:59) */
+export const isValidSlot = (time: string) =>
+  /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
+
+/** Добавя нов час; часовете се пазят сортирани. Връща false при невалиден/съществуващ. */
+export function addSlot(time: string): boolean {
+  if (!isValidSlot(time)) return false;
+  const slots = getSlots();
+  if (slots.includes(time)) return false;
+  setSlots([...slots, time].sort());
+  return true;
+}
+
+/**
+ * Премахва час от списъка. Резервациите за този час се запазват — те остават
+ * видими в регистъра и в деня си, но часът вече не може да се избира.
+ * Заедно с часа отпадат и блокировките/капацитетите, зададени само за него.
+ */
+export function removeSlot(time: string) {
+  setSlots(getSlots().filter((t) => t !== time));
+
+  const blocked = getBlocked().filter((k) => !k.endsWith(`|${time}`));
+  localStorage.setItem(BLOCKED_KEY, JSON.stringify(blocked));
+
+  const overrides = getCapacityOverrides();
+  for (const key of Object.keys(overrides)) {
+    if (key.endsWith(`|${time}`)) delete overrides[key];
+  }
+  localStorage.setItem(CAPACITY_KEY, JSON.stringify(overrides));
+
+  emitChange();
+}
+
+/** Брой резервации за даден час във всички дни — за предупреждение при изтриване */
+export function countBookingsAtTime(time: string): number {
+  return getBookings().filter((b) => b.time === time).length;
+}
+
+/**
+ * Часове за конкретен ден.
+ * Ако за деня са зададени индивидуални часове, важат само те; иначе се
+ * използват стандартните (общите) часове. Промяна на часовете за един ден
+ * не влияе на останалите дни.
+ */
+export function getDaySlotOverrides(): Record<string, string[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = JSON.parse(localStorage.getItem(DAY_SLOTS_KEY) ?? "{}");
+    if (!raw || typeof raw !== "object") return {};
+    const out: Record<string, string[]> = {};
+    for (const [k, v] of Object.entries(raw)) {
+      if (Array.isArray(v) && v.every((t) => typeof t === "string")) {
+        out[k] = v as string[];
+      }
+    }
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+/** Има ли денят собствен списък с часове */
+export function hasDaySlots(dateKey: string): boolean {
+  return dateKey in getDaySlotOverrides();
+}
+
+/** Часовете, валидни за конкретен ден */
+export function getSlotsForDay(dateKey: string): string[] {
+  const o = getDaySlotOverrides();
+  return o[dateKey] ? [...o[dateKey]].sort() : getSlots();
+}
+
+function saveDaySlots(dateKey: string, slots: string[]) {
+  const o = getDaySlotOverrides();
+  o[dateKey] = [...slots].sort();
+  localStorage.setItem(DAY_SLOTS_KEY, JSON.stringify(o));
+  emitChange();
+}
+
+/** Добавя час само за този ден */
+export function addSlotForDay(dateKey: string, time: string): boolean {
+  if (!isValidSlot(time)) return false;
+  const current = getSlotsForDay(dateKey);
+  if (current.includes(time)) return false;
+  saveDaySlots(dateKey, [...current, time]);
+  return true;
+}
+
+/** Премахва час само за този ден (заедно с блокировката и местата за него) */
+export function removeSlotForDay(dateKey: string, time: string) {
+  const current = getSlotsForDay(dateKey);
+  saveDaySlots(
+    dateKey,
+    current.filter((t) => t !== time)
+  );
+
+  const slotKey = `${dateKey}|${time}`;
+
+  const blocked = getBlocked().filter((k) => k !== slotKey);
+  localStorage.setItem(BLOCKED_KEY, JSON.stringify(blocked));
+
+  const overrides = getCapacityOverrides();
+  delete overrides[slotKey];
+  localStorage.setItem(CAPACITY_KEY, JSON.stringify(overrides));
+
+  emitChange();
+}
+
+/** Връща деня към стандартните часове */
+export function resetDaySlots(dateKey: string) {
+  const o = getDaySlotOverrides();
+  delete o[dateKey];
+  localStorage.setItem(DAY_SLOTS_KEY, JSON.stringify(o));
+  emitChange();
+}
+
+/** Брой резервации за конкретен ден и час */
+export function countBookingsAtDayTime(dateKey: string, time: string): number {
+  return getBookings().filter((b) => b.dateKey === dateKey && b.time === time)
+    .length;
 }
 
 /**

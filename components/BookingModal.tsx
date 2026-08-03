@@ -24,6 +24,7 @@ import {
   getBookings,
   getCapacityFor,
   getSlots,
+  getSlotsForDay,
   isSlotBlocked,
   seatCapFor,
   seatLabel,
@@ -100,7 +101,6 @@ function Modal({
   const [selectedDate, setSelectedDate] = useState<SelectedDate | null>(
     initialDate
   );
-  const [slots] = useState<string[]>(() => getSlots());
   const [bookings, setBookings] = useState<BookingRecord[]>(() => getBookings());
   const [selectedSlot, setSelectedSlot] = useState(() => {
     const s = getSlots();
@@ -109,15 +109,31 @@ function Modal({
   const [seatQty, setSeatQty] = useState<SeatCounts>(emptySeats);
   const [availabilityError, setAvailabilityError] = useState("");
 
+  const dateKey = selectedDate
+    ? `${selectedDate.y}-${String(selectedDate.m + 1).padStart(2, "0")}-${String(selectedDate.d).padStart(2, "0")}`
+    : "";
+
+  // всеки ден може да има собствени часове — затова зависят от избраната дата
+  const slots = useMemo(
+    () => (dateKey ? getSlotsForDay(dateKey) : getSlots()),
+    // bookings се обновява при всяка промяна в хранилището, вкл. на часовете
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dateKey, bookings]
+  );
+
   const slotRows = useMemo(() => {
     const rows: string[][] = [];
     for (let i = 0; i < slots.length; i += 4) rows.push(slots.slice(i, i + 4));
     return rows;
   }, [slots]);
 
-  const dateKey = selectedDate
-    ? `${selectedDate.y}-${String(selectedDate.m + 1).padStart(2, "0")}-${String(selectedDate.d).padStart(2, "0")}`
-    : "";
+  // ако избраният час не съществува за новата дата — избираме първия наличен
+  useEffect(() => {
+    if (slots.length === 0) return;
+    if (!slots.includes(selectedSlot)) {
+      setSelectedSlot(slots.includes("10:30") ? "10:30" : slots[0]);
+    }
+  }, [slots, selectedSlot]);
 
   const countFor = (time: string) => countBookings(bookings, dateKey, time);
   const capacityForTime = (time: string) =>

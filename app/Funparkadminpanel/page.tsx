@@ -6,15 +6,21 @@ import {
   SLOT_CAPACITY,
   TICKET_PRICES,
   addBlock,
+  addSlot,
+  countBookingsAtTime,
   deleteBooking,
   getBlocked,
   getBookings,
   getCapacityOverrides,
+  getDaySlotOverrides,
   getSlots,
+  isValidSlot,
+  resetDaySlots,
   SEAT_TYPES,
   confirmBooking,
   removeBlock,
   removeCapacityOverride,
+  removeSlot,
   seatsTotal,
   setCapacityFor,
   subscribeToStore,
@@ -23,7 +29,9 @@ import {
   type SeatCounts,
   type SeatKey,
 } from "@/lib/bookingStore";
-import { AUTH_KEY, isAdminAuthed } from "@/lib/adminAuth";
+import { ADMIN_PASS, ADMIN_USER, AUTH_KEY, isAdminAuthed } from "@/lib/adminAuth";
+import { Logo } from "@/components/Logo";
+import AdminCalendar from "@/components/AdminCalendar";
 import { monthNamesLower } from "@/components/calendarData";
 
 function ticketsLabel(b: BookingRecord) {
@@ -232,6 +240,206 @@ function CapacitySection() {
   );
 }
 
+function SlotsSection() {
+  const [slots, setSlotsState] = useState<string[]>([]);
+  const [customDays, setCustomDays] = useState<Record<string, string[]>>({});
+  const [newSlot, setNewSlot] = useState("");
+  const [error, setError] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<{
+    time: string;
+    count: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const refresh = () => {
+      setSlotsState(getSlots());
+      setCustomDays(getDaySlotOverrides());
+    };
+    refresh();
+    return subscribeToStore(refresh);
+  }, []);
+
+  const customEntries = Object.entries(customDays).sort(([a], [b]) =>
+    a.localeCompare(b)
+  );
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isValidSlot(newSlot)) {
+      setError("Въведете валиден час.");
+      return;
+    }
+    if (slots.includes(newSlot)) {
+      setError("Този час вече съществува.");
+      return;
+    }
+    addSlot(newSlot);
+    setNewSlot("");
+    setError("");
+  };
+
+  const tryRemove = (time: string) => {
+    const count = countBookingsAtTime(time);
+    if (count > 0) setPendingDelete({ time, count });
+    else removeSlot(time);
+  };
+
+  return (
+    <section className="mb-[24px] rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
+      <h2 className="font-golos text-[20px] font-bold text-ink">
+        Стандартни часове
+      </h2>
+      <p className="mt-[4px] text-[13px] text-[#545454]">
+        Часовете, които важат за всеки ден по подразбиране. Ако за конкретен ден
+        са зададени индивидуални часове (от календара), той не се влияе от
+        промените тук.
+      </p>
+
+      <form onSubmit={submit} className="mt-[16px] flex flex-wrap items-end gap-[12px]">
+        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+          <span>
+            Нов час{" "}
+            <span className="text-[11px] font-normal text-[#a1a1aa]">
+              (час : мин)
+            </span>
+          </span>
+          <input
+            type="time"
+            value={newSlot}
+            onChange={(e) => {
+              setNewSlot(e.target.value);
+              setError("");
+            }}
+            title="Първо часовете, после минутите"
+            className={`${inputCls} w-[130px]`}
+          />
+        </label>
+        <button
+          type="submit"
+          className="h-[34px] cursor-pointer rounded-[10px] bg-sun px-[24px] text-[14px] font-semibold text-black/80 transition-colors hover:bg-[#e0b32f]"
+        >
+          Добави час
+        </button>
+        {error && <p className="text-[13px] text-red-600">{error}</p>}
+      </form>
+
+      <p className="mt-[20px] flex items-center gap-[8px] text-[12px] font-semibold text-forest">
+        <span className="rounded-full bg-[rgba(106,142,78,0.12)] px-[10px] py-[3px]">
+          Важат за всеки ден
+        </span>
+        {customEntries.length > 0 && (
+          <span className="font-normal text-[#a1a1aa]">
+            освен {customEntries.length}{" "}
+            {customEntries.length === 1 ? "ден" : "дни"} със собствени часове
+            (виж по-долу)
+          </span>
+        )}
+      </p>
+
+      <div className="mt-[10px] flex flex-wrap gap-[10px]">
+        {slots.length === 0 && (
+          <p className="text-[13px] text-red-600">
+            Няма зададени часове — посетителите не могат да резервират.
+          </p>
+        )}
+        {slots.map((time) => (
+          <span
+            key={time}
+            className="flex items-center gap-[10px] rounded-full border-[1.258px] border-[#dddad2] bg-white px-[14px] py-[7px] font-golos text-[14px] font-semibold text-[#3f3f46]"
+          >
+            {time}
+            <button
+              type="button"
+              aria-label={`Изтрий час ${time}`}
+              className="cursor-pointer leading-none text-[#a1a1aa] transition-colors hover:text-red-600"
+              onClick={() => tryRemove(time)}
+            >
+              ✕
+            </button>
+          </span>
+        ))}
+      </div>
+
+      {customEntries.length > 0 && (
+        <div className="mt-[20px] border-t border-[#eceae4] pt-[16px]">
+          <p className="text-[13px] font-semibold text-ink">
+            Дни със собствени часове
+          </p>
+          <div className="mt-[10px] flex flex-wrap gap-[10px]">
+            {customEntries.map(([key, list]) => (
+              <span
+                key={key}
+                className="flex items-center gap-[10px] rounded-full border-[1.258px] border-[#7aa2d6] bg-white px-[14px] py-[7px] font-golos text-[13px] text-[#3f3f46]"
+              >
+                <span className="font-semibold">{dateLabelFromKey(key)}</span>
+                <span className="text-[#7aa2d6]">
+                  {list.length === 0
+                    ? "без часове"
+                    : `${list.length} часа: ${list.join(", ")}`}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Върни стандартните часове за ${key}`}
+                  title="Върни стандартните часове"
+                  className="cursor-pointer leading-none text-[#a1a1aa] transition-colors hover:text-forest"
+                  onClick={() => resetDaySlots(key)}
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-[16px]"
+          onClick={() => setPendingDelete(null)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-[400px] max-w-full rounded-[10px] bg-offwhite p-[28px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.2)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-golos text-[18px] font-bold text-ink">
+              Изтриване на час {pendingDelete.time}
+            </h3>
+            <p className="mt-[8px] text-[14px] leading-[1.4] text-[#545454]">
+              За този час има{" "}
+              <span className="font-semibold text-ink">
+                {pendingDelete.count}
+              </span>{" "}
+              резервации. Те се запазват в регистъра, но часът вече няма да може
+              да се избира от посетителите.
+            </p>
+            <div className="mt-[24px] flex justify-end gap-[10px]">
+              <button
+                type="button"
+                className="cursor-pointer rounded-[10px] border border-[#dddad2] px-[20px] py-[9px] text-[14px] font-semibold text-[#3f3f46] transition-colors hover:bg-black/5"
+                onClick={() => setPendingDelete(null)}
+              >
+                Откажи
+              </button>
+              <button
+                type="button"
+                className="cursor-pointer rounded-[10px] bg-red-600 px-[20px] py-[9px] text-[14px] font-semibold text-white transition-colors hover:bg-red-700"
+                onClick={() => {
+                  removeSlot(pendingDelete.time);
+                  setPendingDelete(null);
+                }}
+              >
+                Да, изтрий
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function BlockSection() {
   const [blocked, setBlocked] = useState<string[]>([]);
   const [slots, setSlotsState] = useState<string[]>([]);
@@ -346,6 +554,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [view, setView] = useState<"calendar" | "list">("calendar");
 
   useEffect(() => {
     const refresh = () => setBookings(getBookings());
@@ -443,8 +652,36 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <main className="mx-auto max-w-[1100px] px-[16px] pt-[24px]">
-        <CapacitySection />
-        <BlockSection />
+        {/* Превключвател между календарен и списъчен изглед */}
+        <div className="mb-[20px] inline-flex rounded-[10px] bg-offwhite p-[4px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
+          {(
+            [
+              ["calendar", "📅 Календар"],
+              ["list", "📋 Списък"],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setView(id)}
+              className={`cursor-pointer rounded-[8px] px-[20px] py-[8px] font-golos text-[14px] font-semibold transition-colors ${
+                view === id
+                  ? "bg-forest text-white"
+                  : "text-[#545454] hover:text-forest"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {view === "calendar" && <AdminCalendar />}
+
+        {view === "list" && (
+          <>
+            <SlotsSection />
+            <CapacitySection />
+            <BlockSection />
 
         {/* Регистър */}
         <section className="rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
@@ -670,6 +907,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             </div>
           )}
         </section>
+          </>
+        )}
       </main>
 
       {/* Попъп за потвърждение */}
@@ -718,27 +957,100 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   );
 }
 
+/** Екран за вход — панелът се достъпва само през директния линк */
+function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
+  const [user, setUser] = useState("");
+  const [pass, setPass] = useState("");
+  const [error, setError] = useState(false);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (user === ADMIN_USER && pass === ADMIN_PASS) {
+      sessionStorage.setItem(AUTH_KEY, "1");
+      onSuccess();
+    } else {
+      setError(true);
+    }
+  };
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-[#f5f5f7] px-[16px]">
+      <form
+        onSubmit={submit}
+        className="flex w-[400px] max-w-full flex-col items-center rounded-[10px] bg-offwhite px-[32px] py-[40px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]"
+      >
+        <Logo className="h-[49px] w-[71px]" />
+        <h1 className="mt-[20px] font-golos text-[25px] font-bold text-ink">
+          Админ панел
+        </h1>
+        <p className="mt-[6px] text-[14px] text-[#545454]">
+          Влезте, за да управлявате резервациите
+        </p>
+
+        <label className="mt-[28px] w-full font-golos text-[14px] font-medium text-ink">
+          Име
+        </label>
+        <input
+          type="text"
+          value={user}
+          onChange={(e) => {
+            setUser(e.target.value);
+            setError(false);
+          }}
+          autoFocus
+          className="mt-[8px] h-[41px] w-full rounded-[9px] bg-[rgba(161,161,170,0.15)] px-[12px] text-[16px] text-ink outline-none focus:ring-2 focus:ring-forest/40"
+        />
+
+        <label className="mt-[16px] w-full font-golos text-[14px] font-medium text-ink">
+          Парола
+        </label>
+        <input
+          type="password"
+          value={pass}
+          onChange={(e) => {
+            setPass(e.target.value);
+            setError(false);
+          }}
+          className="mt-[8px] h-[41px] w-full rounded-[9px] bg-[rgba(161,161,170,0.15)] px-[12px] text-[16px] text-ink outline-none focus:ring-2 focus:ring-forest/40"
+        />
+
+        {error && (
+          <p className="mt-[12px] w-full text-[13px] text-red-600">
+            Грешно име или парола. Опитайте отново.
+          </p>
+        )}
+
+        <button
+          type="submit"
+          className="mt-[24px] w-full cursor-pointer rounded-[10px] bg-sun py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f]"
+        >
+          Вход
+        </button>
+      </form>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
+  const [ready, setReady] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    if (isAdminAuthed()) {
-      setAuthed(true);
-    } else {
-      // без вход панелът не се показва — обратно към сайта
-      router.replace("/");
-    }
-  }, [router]);
+    setAuthed(isAdminAuthed());
+    setReady(true);
+  }, []);
 
-  if (!authed) return null;
+  if (!ready) return null;
 
-  return (
+  return authed ? (
     <AdminPanel
       onLogout={() => {
         sessionStorage.removeItem(AUTH_KEY);
         router.replace("/");
       }}
     />
+  ) : (
+    <LoginScreen onSuccess={() => setAuthed(true)} />
   );
 }
