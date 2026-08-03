@@ -26,7 +26,7 @@ export default function AdminLoginModal({ onClose }: { onClose: () => void }) {
     if (user === ADMIN_USER && pass === ADMIN_PASS) {
       sessionStorage.setItem(AUTH_KEY, "1");
       onClose();
-      router.push("/admin");
+      router.push("/Funparkadminpanel");
     } else {
       setError(true);
     }
