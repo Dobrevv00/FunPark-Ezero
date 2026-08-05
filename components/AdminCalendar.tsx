@@ -10,7 +10,10 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   SEAT_TYPES,
-  TICKET_PRICES,
+  CURRENCY,
+  SEAT_PRICES,
+  emptySeats,
+  priceForSeats,
   addBlock,
   addSlotForDay,
   capacityKey,
@@ -25,6 +28,8 @@ import {
   getSeatCapsFor,
   getSlots,
   getSlotsForDay,
+  SLOT_RANGE,
+  isSlotInRange,
   isValidSlot,
   removeBlock,
   removeCapacityOverride,
@@ -150,9 +155,7 @@ type Draft = {
   name: string;
   phone: string;
   email: string;
-  adult: number;
-  child: number;
-  small: number;
+  seats: SeatCounts;
 };
 
 /** Модал за редакция на резервация — същите полета като в списъчния изглед */
@@ -172,18 +175,13 @@ function EditBookingModal({
     name: booking.name,
     phone: booking.phone,
     email: booking.email,
-    adult: booking.adult,
-    child: booking.child,
-    small: booking.small,
+    seats: booking.seats ? { ...booking.seats } : emptySeats(),
   });
 
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) =>
     setDraft((d) => ({ ...d, [k]: v }));
 
-  const total =
-    draft.adult * TICKET_PRICES.adult +
-    draft.child * TICKET_PRICES.child +
-    draft.small * TICKET_PRICES.small;
+  const total = priceForSeats(draft.seats);
 
   const canSave =
     /^\d{4}-\d{2}-\d{2}$/.test(draft.dateKey) &&
@@ -287,20 +285,29 @@ function EditBookingModal({
             />
           </label>
           <div />
-          {(["adult", "child", "small"] as const).map((k) => (
+          {SEAT_TYPES.map((s) => (
             <label
-              key={k}
+              key={s.key}
               className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]"
             >
-              {k === "adult" ? "Възрастни" : k === "child" ? "Деца" : "Под 5 г."}
+              {s.label}{" "}
+              <span className="text-[11px] font-normal text-[#a1a1aa]">
+                {SEAT_PRICES[s.key] === 0
+                  ? "безплатно"
+                  : `${SEAT_PRICES[s.key]} ${CURRENCY}`}
+              </span>
               <input
                 type="number"
                 min={0}
-                max={20}
-                value={draft[k]}
-                onChange={(e) =>
-                  set(k, Math.max(0, Math.min(20, Number(e.target.value) || 0)))
-                }
+                max={200}
+                value={draft.seats[s.key]}
+                onChange={(e) => {
+                  const v = Math.max(0, Number(e.target.value) || 0);
+                  setDraft((d) => ({
+                    ...d,
+                    seats: { ...d.seats, [s.key]: v },
+                  }));
+                }}
                 className={inputCls}
               />
             </label>
@@ -308,7 +315,7 @@ function EditBookingModal({
         </div>
 
         <p className="mt-[16px] font-golos text-[15px] font-bold text-ink">
-          Сума: {total} лв
+          Сума: {total} {CURRENCY}
         </p>
 
         <div className="mt-[20px] flex justify-end gap-[10px]">
@@ -577,6 +584,12 @@ export default function AdminCalendar() {
                   setSlotError("Невалиден час.");
                   return;
                 }
+                if (!isSlotInRange(newSlot)) {
+                  setSlotError(
+                    `Часът трябва да е между ${SLOT_RANGE.min} и ${SLOT_RANGE.max}.`
+                  );
+                  return;
+                }
                 if (slots.includes(newSlot)) {
                   setSlotError("Този час вече съществува за деня.");
                   return;
@@ -585,21 +598,24 @@ export default function AdminCalendar() {
                 setNewSlot("");
                 setSlotError("");
               }}
+              noValidate
               className="flex items-end gap-[6px]"
             >
               <label className="flex flex-col gap-[2px]">
                 <span className="pl-[4px] text-[9px] font-semibold uppercase tracking-[1.5px] text-[#a1a1aa]">
-                  час : мин
+                  {SLOT_RANGE.min} – {SLOT_RANGE.max}
                 </span>
                 <input
                   type="time"
                   value={newSlot}
+                  min={SLOT_RANGE.min}
+                  max={SLOT_RANGE.max}
                   onChange={(e) => {
                     setNewSlot(e.target.value);
                     setSlotError("");
                   }}
                   aria-label="Нов час (часове и минути)"
-                  title="Първо часовете, после минутите"
+                  title={`Допустим диапазон: ${SLOT_RANGE.min} – ${SLOT_RANGE.max}`}
                   className="h-[30px] w-[112px] rounded-[8px] bg-white px-[8px] text-[12px] text-ink outline-none ring-1 ring-[#dddad2] focus:ring-2 focus:ring-forest/40"
                 />
               </label>
@@ -632,7 +648,7 @@ export default function AdminCalendar() {
               Няма часове за този ден — посетителите не могат да резервират.
             </p>
           )}
-          <div className="mt-[8px] flex flex-col gap-[6px]">
+          <div className="mt-[10px] flex flex-col gap-[10px]">
             {slots.map((slot) => {
               const slotKey = `${selected}|${slot}`;
               const caps = getSeatCapsFor(selected, slot);
@@ -645,20 +661,20 @@ export default function AdminCalendar() {
               return (
                 <div
                   key={slot}
-                  className={`rounded-[8px] border p-[10px] ${
+                  className={`rounded-[10px] border p-[14px] ${
                     isBlocked
                       ? "border-red-200 bg-red-50"
                       : "border-[#e6e4de] bg-white"
                   }`}
                 >
-                  <div className="flex flex-wrap items-center gap-[10px]">
-                    <span className="w-[48px] shrink-0 font-golos text-[14px] font-semibold text-ink">
+                  <div className="flex flex-wrap items-center gap-[14px]">
+                    <span className="w-[54px] shrink-0 font-golos text-[16px] font-semibold text-ink">
                       {slot}
                     </span>
-                    <span className="w-[70px] shrink-0 text-[12px] text-[#545454]">
+                    <span className="w-[86px] shrink-0 text-[13px] text-[#545454]">
                       {taken}/{cap} места
                     </span>
-                    <span className="h-[6px] min-w-[60px] flex-1 overflow-hidden rounded-full bg-[#eceae4]">
+                    <span className="h-[7px] min-w-[70px] flex-1 overflow-hidden rounded-full bg-[#eceae4]">
                       <span
                         className={`block h-full rounded-full ${
                           pct >= 100 ? "bg-red-400" : "bg-forest"
@@ -667,7 +683,7 @@ export default function AdminCalendar() {
                       />
                     </span>
                     {hasOverride && (
-                      <span className="text-[11px] text-[#7aa2d6]">
+                      <span className="text-[12px] text-[#7aa2d6]">
                         променен
                       </span>
                     )}
@@ -677,7 +693,7 @@ export default function AdminCalendar() {
                       onClick={() =>
                         setCapEditor(capEditor === slot ? null : slot)
                       }
-                      className={`cursor-pointer rounded-[8px] border px-[10px] py-[4px] text-[11px] font-semibold transition-colors ${
+                      className={`cursor-pointer rounded-[8px] border px-[14px] py-[7px] text-[12.5px] font-semibold transition-colors ${
                         capEditor === slot
                           ? "border-forest bg-[rgba(106,142,78,0.1)] text-forest"
                           : "border-[#dddad2] text-[#3f3f46] hover:border-forest hover:text-forest"
@@ -693,7 +709,7 @@ export default function AdminCalendar() {
                           ? removeBlock(slotKey)
                           : addBlock(slotKey)
                       }
-                      className={`rounded-[8px] border px-[10px] py-[4px] text-[11px] font-semibold transition-colors ${
+                      className={`rounded-[8px] border px-[14px] py-[7px] text-[12.5px] font-semibold transition-colors ${
                         selInfo.dayBlocked
                           ? "cursor-not-allowed border-[#e6e4de] text-[#c3c3c3]"
                           : blocked.includes(slotKey)
@@ -715,7 +731,7 @@ export default function AdminCalendar() {
                           removeSlotForDay(selected, slot);
                         }
                       }}
-                      className="cursor-pointer px-[4px] text-[13px] leading-none text-[#a1a1aa] transition-colors hover:text-red-600"
+                      className="cursor-pointer px-[6px] text-[15px] leading-none text-[#a1a1aa] transition-colors hover:text-red-600"
                     >
                       ✕
                     </button>
@@ -752,42 +768,43 @@ export default function AdminCalendar() {
           </div>
 
           {/* Резервации за деня */}
-          <h3 className="mt-[18px] font-golos text-[14px] font-bold text-ink">
+          <h3 className="mt-[26px] font-golos text-[16px] font-bold text-ink">
             Резервации за деня
           </h3>
           {dayBookings.length === 0 ? (
-            <p className="mt-[8px] text-[13px] text-[#545454]">
+            <p className="mt-[10px] text-[13.5px] text-[#545454]">
               Няма резервации за тази дата.
             </p>
           ) : (
-            <div className="mt-[8px] flex flex-col gap-[8px]">
+            <div className="mt-[12px] flex flex-col gap-[12px]">
               {dayBookings.map((b) => (
                 <div
                   key={b.id}
-                  className="rounded-[8px] border border-[#e6e4de] bg-white p-[12px]"
+                  className="rounded-[10px] border border-[#e6e4de] bg-white p-[16px]"
                 >
-                  <div className="flex flex-wrap items-center gap-[8px]">
-                    <span className="font-golos text-[13px] font-semibold text-forest">
+                  <div className="flex flex-wrap items-center gap-[12px]">
+                    <span className="font-golos text-[14px] font-semibold text-forest">
                       {b.id}
                     </span>
-                    <span className="font-golos text-[13px] font-semibold text-ink">
+                    <span className="font-golos text-[15px] font-semibold text-ink">
                       {b.time}
                     </span>
-                    <span className="text-[13px] text-ink">{b.name}</span>
-                    <span className="text-[12px] text-[#545454]">
-                      {b.places ?? 1} м. · {b.total} лв
+                    <span className="text-[14px] text-ink">{b.name}</span>
+                    <span className="text-[13px] text-[#545454]">
+                      {b.places ?? 1} м. · {b.total.toLocaleString("bg-BG")}{" "}
+                      {CURRENCY}
                     </span>
                     {b.confirmed ? (
-                      <span className="rounded-full bg-[rgba(106,142,78,0.15)] px-[8px] py-[2px] text-[11px] font-semibold text-forest">
+                      <span className="rounded-full bg-[rgba(106,142,78,0.15)] px-[10px] py-[3px] text-[12px] font-semibold text-forest">
                         ✓ Потвърдена
                       </span>
                     ) : (
-                      <span className="rounded-full bg-[rgba(244,198,63,0.2)] px-[8px] py-[2px] text-[11px] font-semibold text-[#8a6d1a]">
+                      <span className="rounded-full bg-[rgba(244,198,63,0.2)] px-[10px] py-[3px] text-[12px] font-semibold text-[#8a6d1a]">
                         Чакаща
                       </span>
                     )}
                   </div>
-                  <p className="mt-[4px] text-[12px] text-[#545454]">
+                  <p className="mt-[8px] text-[13px] leading-[1.5] text-[#545454]">
                     {b.phone} · {b.email}
                     {b.seats &&
                       ` · ${
@@ -796,9 +813,27 @@ export default function AdminCalendar() {
                           .join(", ") || "—"
                       }`}
                   </p>
-                  <div className="mt-[8px] flex flex-wrap gap-[6px]">
+                  {/* Персонализация от стъпка „Плащане“ */}
+                  {(b.giftFor || b.giftMessage) && (
+                    <div className="mt-[10px] rounded-[8px] bg-[rgba(244,198,63,0.12)] px-[12px] py-[10px]">
+                      <p className="font-golos text-[11px] font-semibold uppercase tracking-[1.2px] text-[#8a6d1a]">
+                        🎁 Персонализация
+                      </p>
+                      {b.giftFor && (
+                        <p className="mt-[5px] text-[13px] text-[#3f3f46]">
+                          За: <span className="font-semibold">{b.giftFor}</span>
+                        </p>
+                      )}
+                      {b.giftMessage && (
+                        <p className="mt-[3px] text-[13px] italic leading-[1.5] text-[#3f3f46]">
+                          „{b.giftMessage}“
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <div className="mt-[12px] flex flex-wrap gap-[8px]">
                     {b.confirmed ? (
-                      <span className="text-[12px] text-[#a1a1aa]">
+                      <span className="text-[13px] text-[#a1a1aa]">
                         🔒 Заключена
                       </span>
                     ) : (
@@ -806,21 +841,21 @@ export default function AdminCalendar() {
                         <button
                           type="button"
                           onClick={() => setConfirmId(b.id)}
-                          className="cursor-pointer rounded-[8px] bg-forest px-[12px] py-[5px] text-[12px] font-semibold text-white transition-colors hover:bg-pine"
+                          className="cursor-pointer rounded-[8px] bg-forest px-[16px] py-[8px] text-[13px] font-semibold text-white transition-colors hover:bg-pine"
                         >
                           Потвърди
                         </button>
                         <button
                           type="button"
                           onClick={() => setEditing(b)}
-                          className="cursor-pointer rounded-[8px] border border-[#dddad2] px-[12px] py-[5px] text-[12px] font-semibold text-[#3f3f46] transition-colors hover:border-forest hover:text-forest"
+                          className="cursor-pointer rounded-[8px] border border-[#dddad2] px-[16px] py-[8px] text-[13px] font-semibold text-[#3f3f46] transition-colors hover:border-forest hover:text-forest"
                         >
                           Редактирай
                         </button>
                         <button
                           type="button"
                           onClick={() => deleteBooking(b.id)}
-                          className="cursor-pointer rounded-[8px] border border-red-200 px-[12px] py-[5px] text-[12px] font-semibold text-red-600 transition-colors hover:bg-red-50"
+                          className="cursor-pointer rounded-[8px] border border-red-200 px-[16px] py-[8px] text-[13px] font-semibold text-red-600 transition-colors hover:bg-red-50"
                         >
                           Изтрий
                         </button>

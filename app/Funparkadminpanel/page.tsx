@@ -4,9 +4,13 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   SLOT_CAPACITY,
-  TICKET_PRICES,
+  CURRENCY,
+  emptySeats,
+  priceForSeats,
   addBlock,
   addSlot,
+  addSlotForDay,
+  countBookingsAtDayTime,
   countBookingsAtTime,
   deleteBooking,
   getBlocked,
@@ -14,6 +18,8 @@ import {
   getCapacityOverrides,
   getDaySlotOverrides,
   getSlots,
+  SLOT_RANGE,
+  isSlotInRange,
   isValidSlot,
   resetDaySlots,
   SEAT_TYPES,
@@ -21,6 +27,7 @@ import {
   removeBlock,
   removeCapacityOverride,
   removeSlot,
+  removeSlotForDay,
   seatsTotal,
   setCapacityFor,
   subscribeToStore,
@@ -34,14 +41,14 @@ import { Logo } from "@/components/Logo";
 import AdminCalendar from "@/components/AdminCalendar";
 import { monthNamesLower } from "@/components/calendarData";
 
+/** Обобщение на билетите по видове седалки, напр. „1 × До 30 кг · 2 × От 30 до 60 кг“ */
 function ticketsLabel(b: BookingRecord) {
-  return [
-    b.adult > 0 && `${b.adult} възр.`,
-    b.child > 0 && `${b.child} деца`,
-    b.small > 0 && `${b.small} под 5`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  if (!b.seats) return "—";
+  return (
+    SEAT_TYPES.filter((s) => (b.seats[s.key] ?? 0) > 0)
+      .map((s) => `${b.seats[s.key]} × ${s.label}`)
+      .join(" · ") || "—"
+  );
 }
 
 function dateLabelFromKey(dateKey: string) {
@@ -57,9 +64,7 @@ type Draft = {
   name: string;
   phone: string;
   email: string;
-  adult: number;
-  child: number;
-  small: number;
+  seats: SeatCounts;
 };
 
 const inputCls =
@@ -204,6 +209,21 @@ function CapacitySection() {
             {capTotal}).
           </p>
         )}
+        <p className="w-full text-[12px] font-semibold text-forest">
+          {/^\d{4}-\d{2}-\d{2}$/.test(capDate) ? (
+            <>
+              Ще важи за{" "}
+              <span className="rounded-full bg-[rgba(106,142,78,0.12)] px-[10px] py-[3px]">
+                {dateLabelFromKey(capDate)}
+                {capTime ? `, ${capTime} ч` : " — целия ден"}
+              </span>
+            </>
+          ) : (
+            <span className="font-normal text-[#a1a1aa]">
+              Изберете дата, за да видите за кой ден ще важи промяната.
+            </span>
+          )}
+        </p>
       </form>
 
       {entries.length > 0 && (
@@ -243,6 +263,7 @@ function CapacitySection() {
 function SlotsSection() {
   const [slots, setSlotsState] = useState<string[]>([]);
   const [customDays, setCustomDays] = useState<Record<string, string[]>>({});
+  const [selectedDay, setSelectedDay] = useState(""); // "" = стандартни за всички дни
   const [newSlot, setNewSlot] = useState("");
   const [error, setError] = useState("");
   const [pendingDelete, setPendingDelete] = useState<{
@@ -263,54 +284,97 @@ function SlotsSection() {
     a.localeCompare(b)
   );
 
+  /** Избран ли е конкретен ден, или се редактират стандартните часове */
+  const dayMode = /^\d{4}-\d{2}-\d{2}$/.test(selectedDay);
+  /** Денят вече има собствени часове (различни от стандартните) */
+  const dayHasOwn = dayMode && selectedDay in customDays;
+  /** Часовете, които се показват и редактират в момента */
+  const visibleSlots = dayHasOwn
+    ? [...customDays[selectedDay]].sort()
+    : slots;
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidSlot(newSlot)) {
       setError("Въведете валиден час.");
       return;
     }
-    if (slots.includes(newSlot)) {
+    if (!isSlotInRange(newSlot)) {
+      setError(
+        `Часът трябва да е между ${SLOT_RANGE.min} и ${SLOT_RANGE.max}.`
+      );
+      return;
+    }
+    if (visibleSlots.includes(newSlot)) {
       setError("Този час вече съществува.");
       return;
     }
-    addSlot(newSlot);
+    if (dayMode) addSlotForDay(selectedDay, newSlot);
+    else addSlot(newSlot);
     setNewSlot("");
     setError("");
   };
 
   const tryRemove = (time: string) => {
-    const count = countBookingsAtTime(time);
-    if (count > 0) setPendingDelete({ time, count });
+    const count = dayMode
+      ? countBookingsAtDayTime(selectedDay, time)
+      : countBookingsAtTime(time);
+    if (count > 0) {
+      setPendingDelete({ time, count });
+      return;
+    }
+    if (dayMode) removeSlotForDay(selectedDay, time);
     else removeSlot(time);
   };
 
   return (
     <section className="mb-[24px] rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
-      <h2 className="font-golos text-[20px] font-bold text-ink">
-        Стандартни часове
-      </h2>
+      <h2 className="font-golos text-[20px] font-bold text-ink">Часове</h2>
       <p className="mt-[4px] text-[13px] text-[#545454]">
-        Часовете, които важат за всеки ден по подразбиране. Ако за конкретен ден
-        са зададени индивидуални часове (от календара), той не се влияе от
-        промените тук.
+        Без избран ден се редактират стандартните часове, които важат за всеки
+        ден. Изберете конкретен ден, за да зададете часове само за него — те не
+        влияят на останалите дни.
       </p>
 
-      <form onSubmit={submit} className="mt-[16px] flex flex-wrap items-end gap-[12px]">
+      <form
+        onSubmit={submit}
+        noValidate
+        className="mt-[16px] flex flex-wrap items-end gap-[12px]"
+      >
+        <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
+          <span>
+            Ден{" "}
+            <span className="text-[11px] font-normal text-[#a1a1aa]">
+              (празно = всички дни)
+            </span>
+          </span>
+          <input
+            type="date"
+            value={selectedDay}
+            onChange={(e) => {
+              setSelectedDay(e.target.value);
+              setError("");
+            }}
+            className={`${inputCls} w-[160px]`}
+          />
+        </label>
         <label className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]">
           <span>
             Нов час{" "}
             <span className="text-[11px] font-normal text-[#a1a1aa]">
-              (час : мин)
+              ({SLOT_RANGE.min} – {SLOT_RANGE.max})
             </span>
           </span>
           <input
             type="time"
             value={newSlot}
+            min={SLOT_RANGE.min}
+            max={SLOT_RANGE.max}
             onChange={(e) => {
               setNewSlot(e.target.value);
               setError("");
             }}
-            title="Първо часовете, после минутите"
+            title={`Допустим диапазон: ${SLOT_RANGE.min} – ${SLOT_RANGE.max}`}
             className={`${inputCls} w-[130px]`}
           />
         </label>
@@ -320,14 +384,43 @@ function SlotsSection() {
         >
           Добави час
         </button>
+        {selectedDay && (
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedDay("");
+              setError("");
+            }}
+            className="h-[34px] cursor-pointer rounded-[10px] border border-[#dddad2] px-[16px] text-[13px] font-semibold text-[#3f3f46] transition-colors hover:border-forest hover:text-forest"
+          >
+            Всички дни
+          </button>
+        )}
         {error && <p className="text-[13px] text-red-600">{error}</p>}
       </form>
 
-      <p className="mt-[20px] flex items-center gap-[8px] text-[12px] font-semibold text-forest">
-        <span className="rounded-full bg-[rgba(106,142,78,0.12)] px-[10px] py-[3px]">
-          Важат за всеки ден
-        </span>
-        {customEntries.length > 0 && (
+      <p className="mt-[20px] flex flex-wrap items-center gap-[8px] text-[12px] font-semibold text-forest">
+        {dayMode && (
+          <span className="rounded-full bg-[rgba(106,142,78,0.12)] px-[10px] py-[3px]">
+            Часове за {dateLabelFromKey(selectedDay)}
+          </span>
+        )}
+        {dayMode && !dayHasOwn && (
+          <span className="font-normal text-[#a1a1aa]">
+            в момента ползва стандартните — промяна тук ще ги направи
+            индивидуални само за този ден
+          </span>
+        )}
+        {dayMode && dayHasOwn && (
+          <button
+            type="button"
+            onClick={() => resetDaySlots(selectedDay)}
+            className="cursor-pointer font-semibold text-[#a1a1aa] underline transition-colors hover:text-forest"
+          >
+            Върни стандартните часове за деня
+          </button>
+        )}
+        {!dayMode && customEntries.length > 0 && (
           <span className="font-normal text-[#a1a1aa]">
             освен {customEntries.length}{" "}
             {customEntries.length === 1 ? "ден" : "дни"} със собствени часове
@@ -337,12 +430,12 @@ function SlotsSection() {
       </p>
 
       <div className="mt-[10px] flex flex-wrap gap-[10px]">
-        {slots.length === 0 && (
+        {visibleSlots.length === 0 && (
           <p className="text-[13px] text-red-600">
             Няма зададени часове — посетителите не могат да резервират.
           </p>
         )}
-        {slots.map((time) => (
+        {visibleSlots.map((time) => (
           <span
             key={time}
             className="flex items-center gap-[10px] rounded-full border-[1.258px] border-[#dddad2] bg-white px-[14px] py-[7px] font-golos text-[14px] font-semibold text-[#3f3f46]"
@@ -369,9 +462,21 @@ function SlotsSection() {
             {customEntries.map(([key, list]) => (
               <span
                 key={key}
-                className="flex items-center gap-[10px] rounded-full border-[1.258px] border-[#7aa2d6] bg-white px-[14px] py-[7px] font-golos text-[13px] text-[#3f3f46]"
+                className={`flex items-center gap-[10px] rounded-full border-[1.258px] bg-white px-[14px] py-[7px] font-golos text-[13px] text-[#3f3f46] ${
+                  selectedDay === key ? "border-forest" : "border-[#7aa2d6]"
+                }`}
               >
-                <span className="font-semibold">{dateLabelFromKey(key)}</span>
+                <button
+                  type="button"
+                  title="Редактирай часовете за този ден"
+                  onClick={() => {
+                    setSelectedDay(key);
+                    setError("");
+                  }}
+                  className="cursor-pointer font-semibold underline-offset-2 transition-colors hover:text-forest hover:underline"
+                >
+                  {dateLabelFromKey(key)}
+                </button>
                 <span className="text-[#7aa2d6]">
                   {list.length === 0
                     ? "без часове"
@@ -407,12 +512,25 @@ function SlotsSection() {
               Изтриване на час {pendingDelete.time}
             </h3>
             <p className="mt-[8px] text-[14px] leading-[1.4] text-[#545454]">
-              За този час има{" "}
-              <span className="font-semibold text-ink">
-                {pendingDelete.count}
-              </span>{" "}
-              резервации. Те се запазват в регистъра, но часът вече няма да може
-              да се избира от посетителите.
+              {dayMode ? (
+                <>
+                  За {dateLabelFromKey(selectedDay)} в този час има{" "}
+                  <span className="font-semibold text-ink">
+                    {pendingDelete.count}
+                  </span>{" "}
+                  резервации. Те се запазват в регистъра, но часът няма да може
+                  да се избира за този ден. Останалите дни не се променят.
+                </>
+              ) : (
+                <>
+                  За този час има{" "}
+                  <span className="font-semibold text-ink">
+                    {pendingDelete.count}
+                  </span>{" "}
+                  резервации. Те се запазват в регистъра, но часът вече няма да
+                  може да се избира от посетителите — за всички дни.
+                </>
+              )}
             </p>
             <div className="mt-[24px] flex justify-end gap-[10px]">
               <button
@@ -426,7 +544,8 @@ function SlotsSection() {
                 type="button"
                 className="cursor-pointer rounded-[10px] bg-red-600 px-[20px] py-[9px] text-[14px] font-semibold text-white transition-colors hover:bg-red-700"
                 onClick={() => {
-                  removeSlot(pendingDelete.time);
+                  if (dayMode) removeSlotForDay(selectedDay, pendingDelete.time);
+                  else removeSlot(pendingDelete.time);
                   setPendingDelete(null);
                 }}
               >
@@ -571,9 +690,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       name: b.name,
       phone: b.phone,
       email: b.email,
-      adult: b.adult,
-      child: b.child,
-      small: b.small,
+      seats: b.seats ? { ...b.seats } : emptySeats(),
     });
   };
 
@@ -585,11 +702,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const setField = <K extends keyof Draft>(key: K, value: Draft[K]) =>
     setDraft((d) => (d ? { ...d, [key]: value } : d));
 
-  const draftTotal = draft
-    ? draft.adult * TICKET_PRICES.adult +
-      draft.child * TICKET_PRICES.child +
-      draft.small * TICKET_PRICES.small
-    : 0;
+  const draftTotal = draft ? priceForSeats(draft.seats) : 0;
 
   const canSave =
     !!draft &&
@@ -608,22 +721,25 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       phone: draft.phone.trim(),
       email: draft.email.trim(),
       dateLabel: dateLabelFromKey(draft.dateKey),
+      places: seatsTotal(draft.seats),
       total: draftTotal,
     });
     cancelEdit();
   };
 
-  const numberInput = (key: "adult" | "child" | "small", label: string) => (
+  /** Брой места за конкретен вид седалка при редакция */
+  const seatInput = (key: SeatKey, label: string) => (
     <label className="flex items-center gap-[8px] text-[12px] text-[#545454]">
-      <span className="w-[42px] shrink-0">{label}</span>
+      <span className="w-[92px] shrink-0">{label}</span>
       <input
         type="number"
         min={0}
-        max={20}
-        value={draft ? draft[key] : 0}
-        onChange={(e) =>
-          setField(key, Math.max(0, Math.min(20, Number(e.target.value) || 0)))
-        }
+        max={200}
+        value={draft ? draft.seats[key] : 0}
+        onChange={(e) => {
+          const v = Math.max(0, Number(e.target.value) || 0);
+          setDraft((d) => (d ? { ...d, seats: { ...d.seats, [key]: v } } : d));
+        }}
         className="h-[34px] w-[76px] shrink-0 rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40"
       />
     </label>
@@ -788,7 +904,20 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                               className={`${inputCls} min-w-[120px]`}
                             />
                           ) : (
-                            b.name
+                            <>
+                              {b.name}
+                              {/* персонализация от стъпка „Плащане“ */}
+                              {(b.giftFor || b.giftMessage) && (
+                                <span className="mt-[4px] block max-w-[190px] text-[11.5px] leading-[1.4] text-[#8a6d1a]">
+                                  {b.giftFor && <>🎁 За: {b.giftFor}</>}
+                                  {b.giftMessage && (
+                                    <span className="block italic">
+                                      „{b.giftMessage}“
+                                    </span>
+                                  )}
+                                </span>
+                              )}
+                            </>
                           )}
                         </td>
                         <td className="py-[12px] pr-[12px]">
@@ -818,16 +947,18 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
                         <td className="py-[12px] pr-[12px]">
                           {isEditing ? (
                             <div className="flex flex-col gap-[6px]">
-                              {numberInput("adult", "възр.")}
-                              {numberInput("child", "деца")}
-                              {numberInput("small", "под 5")}
+                              {SEAT_TYPES.map((s) => (
+                                <div key={s.key}>{seatInput(s.key, s.label)}</div>
+                              ))}
                             </div>
                           ) : (
                             ticketsLabel(b)
                           )}
                         </td>
                         <td className="py-[12px] pr-[12px] font-semibold">
-                          {isEditing ? `${draftTotal} лв` : `${b.total} лв`}
+                          {isEditing
+                            ? `${draftTotal.toLocaleString("bg-BG")} ${CURRENCY}`
+                            : `${b.total.toLocaleString("bg-BG")} ${CURRENCY}`}
                         </td>
                         <td className="py-[12px] pr-[12px] text-[#545454]">
                           {new Date(b.createdAt).toLocaleString("bg-BG", {

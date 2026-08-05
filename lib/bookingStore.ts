@@ -17,12 +17,11 @@ export type BookingRecord = {
   name: string;
   phone: string;
   email: string;
-  adult: number;
-  child: number;
-  small: number;
-  total: number;
+  total: number; // обща сума в евро
   createdAt: string;
   confirmed?: boolean; // потвърдена от администратор — заключена за промяна/изтриване
+  giftFor?: string; // „За:“ от персонализацията на стъпка „Плащане“
+  giftMessage?: string; // персонализирано съобщение от стъпка „Плащане“
 };
 
 /**
@@ -61,8 +60,20 @@ const BLOCKED_KEY = "fpe-blocked";
 /** Максимален брой резервации за един времеви слот */
 export const SLOT_CAPACITY = 20;
 
-/** Цени на билетите в лв */
-export const TICKET_PRICES = { adult: 28, child: 16, small: 0 };
+/** Цена на билет в евро според вида седалка */
+export const SEAT_PRICES: Record<SeatKey, number> = {
+  light: 0, // До 30 кг — безплатно
+  mid: 16, // От 30 до 60 кг
+  heavy: 28, // От 60 до 140 кг
+};
+
+export const CURRENCY = "€";
+
+/** Обща сума в евро за избраните места по видове седалки */
+export const priceForSeats = (s: SeatCounts) =>
+  s.light * SEAT_PRICES.light +
+  s.mid * SEAT_PRICES.mid +
+  s.heavy * SEAT_PRICES.heavy;
 
 export const defaultSlots = [
   "09:00", "09:30", "10:00", "10:30",
@@ -179,13 +190,20 @@ export function setSlots(slots: string[]) {
   emitChange();
 }
 
+/** Допустим диапазон за нови часове (работно време) */
+export const SLOT_RANGE = { min: "09:00", max: "17:30" } as const;
+
 /** Валиден ли е часът във формат "HH:MM" (00:00 – 23:59) */
 export const isValidSlot = (time: string) =>
   /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
 
+/** В работния диапазон ли е часът (09:00 – 17:30) */
+export const isSlotInRange = (time: string) =>
+  isValidSlot(time) && time >= SLOT_RANGE.min && time <= SLOT_RANGE.max;
+
 /** Добавя нов час; часовете се пазят сортирани. Връща false при невалиден/съществуващ. */
 export function addSlot(time: string): boolean {
-  if (!isValidSlot(time)) return false;
+  if (!isSlotInRange(time)) return false;
   const slots = getSlots();
   if (slots.includes(time)) return false;
   setSlots([...slots, time].sort());
@@ -260,7 +278,7 @@ function saveDaySlots(dateKey: string, slots: string[]) {
 
 /** Добавя час само за този ден */
 export function addSlotForDay(dateKey: string, time: string): boolean {
-  if (!isValidSlot(time)) return false;
+  if (!isSlotInRange(time)) return false;
   const current = getSlotsForDay(dateKey);
   if (current.includes(time)) return false;
   saveDaySlots(dateKey, [...current, time]);
