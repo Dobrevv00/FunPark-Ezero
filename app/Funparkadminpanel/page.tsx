@@ -9,9 +9,7 @@ import {
   DEFAULT_SEAT_PRICES,
   emptySeats,
   getPrices,
-  hasCustomPrices,
   priceForSeats,
-  resetPrices,
   setPrices,
   type PriceSettings,
   addBlock,
@@ -102,14 +100,12 @@ function PricesSection() {
   });
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
-  const [custom, setCustom] = useState(false);
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     const refresh = () => {
       const p = getPrices();
       setCurrent(p);
-      setCustom(hasCustomPrices());
       // не презаписваме полетата, докато администраторът пише в тях
       setDirty((isDirty) => {
         if (!isDirty) {
@@ -147,11 +143,6 @@ function PricesSection() {
     <section className="mb-[24px] rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
       <h2 className="font-golos text-[20px] font-bold text-ink">
         Цени на билетите
-        {custom && (
-          <span className="ml-[10px] rounded-full bg-[rgba(122,162,214,0.18)] px-[10px] py-[3px] text-[12px] font-semibold text-[#4b7cb5]">
-            променени
-          </span>
-        )}
       </h2>
       <p className="mt-[4px] text-[13px] text-[#545454]">
         Цената на билета се определя от вида седалка. Тук можете да я промените —
@@ -236,20 +227,6 @@ function PricesSection() {
         редактирате стара резервация, сумата ще се преизчисли по новите цени.
       </p>
 
-      {custom && (
-        <button
-          type="button"
-          onClick={() => {
-            resetPrices();
-            setDirty(false);
-            setSaved(false);
-          }}
-          className="mt-[10px] cursor-pointer text-[12px] font-semibold text-[#a1a1aa] underline transition-colors hover:text-red-600"
-        >
-          Върни цените по подразбиране ({SEAT_TYPES.map((s) => priceLabel(DEFAULT_SEAT_PRICES[s.key])).join(" / ")}{" "}
-          {CURRENCY}, такса {priceLabel(DEFAULT_PRINTED_FEE)} {CURRENCY})
-        </button>
-      )}
     </section>
   );
 }
