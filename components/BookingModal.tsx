@@ -17,9 +17,10 @@ import {
 } from "./calendarData";
 import {
   CURRENCY,
-  SEAT_PRICES,
   SEAT_TYPES,
   priceForSeats,
+  printedFee,
+  seatPrice,
   countBookings,
   countSeat,
   emptySeats,
@@ -65,9 +66,6 @@ const timeLegend = [
 /** Ширини от дизайна (139/280/419/511px спрямо лента от 556px) — в проценти, за да са верни и на тесен екран */
 const progressWidths = ["20%", "40%", "60%", "80%", "96%"];
 
-/** Такса за печатен билет — добавя се към общата сума */
-const PRINTED_TICKET_FEE = 1.99;
-
 /** Цена в евро — цели числа без излишни нули, иначе с две (напр. „45,99“) */
 const fmtPrice = (n: number) =>
   Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ",");
@@ -77,13 +75,11 @@ const deliveryOptions = [
   {
     key: "digital",
     title: "ДИГИТАЛЕН БИЛЕТ",
-    price: "БЕЗПЛАТНО",
     hint: "Изпраща се веднага по имейл",
   },
   {
     key: "printed",
     title: "ПЕЧАТЕН БИЛЕТ",
-    price: `+${fmtPrice(PRINTED_TICKET_FEE)} ${CURRENCY}`,
     hint: "Разпечатваме го на касата при пристигане",
   },
 ] as const;
@@ -312,8 +308,9 @@ function Modal({
   // сумата се формира от избраните седалки (цена според вида)
   const totalPrice = priceForSeats(seatQty);
 
-  // печатният билет добавя такса към сумата за плащане
-  const deliveryFee = delivery === "printed" ? PRINTED_TICKET_FEE : 0;
+  // печатният билет добавя такса към сумата за плащане (цените се задават в админ панела)
+  const printedTicketFee = printedFee();
+  const deliveryFee = delivery === "printed" ? printedTicketFee : 0;
   const totalDue = totalPrice + deliveryFee;
 
   const canProceed =
@@ -616,9 +613,9 @@ function Modal({
                         )}
                         <span className="text-[#a1a1aa]">
                           {" · "}
-                          {SEAT_PRICES[s.key] === 0
+                          {seatPrice(s.key) === 0
                             ? "безплатно"
-                            : `${SEAT_PRICES[s.key]} ${CURRENCY}`}
+                            : `${fmtPrice(seatPrice(s.key))} ${CURRENCY}`}
                         </span>
                       </span>
                     </div>
@@ -676,7 +673,7 @@ function Modal({
             <div className="flex flex-col gap-[14px]">
               {SEAT_TYPES.filter((s) => seatQty[s.key] > 0).map((s) => {
                 const qty = seatQty[s.key];
-                const unit = SEAT_PRICES[s.key];
+                const unit = seatPrice(s.key);
                 return (
                   <div
                     key={s.key}
@@ -688,11 +685,11 @@ function Modal({
                       </p>
                       <p className="font-golos text-[14px] text-[#a1a1aa]">
                         {qty} {qty === 1 ? "място" : "места"} ×{" "}
-                        {unit === 0 ? "безплатно" : `${unit} ${CURRENCY}`}
+                        {unit === 0 ? "безплатно" : `${fmtPrice(unit)} ${CURRENCY}`}
                       </p>
                     </div>
                     <p className="font-golos text-[20px] font-bold text-forest">
-                      {unit === 0 ? "0" : qty * unit} {CURRENCY}
+                      {fmtPrice(Math.round(qty * unit * 100) / 100)} {CURRENCY}
                     </p>
                   </div>
                 );
@@ -707,7 +704,7 @@ function Modal({
               </p>
               <div className="flex flex-col items-end gap-[2.596px]">
                 <p className="font-golos text-[33.742px] font-semibold leading-none text-forest">
-                  {totalPrice} {CURRENCY}
+                  {fmtPrice(totalPrice)} {CURRENCY}
                 </p>
                 <p className="font-golos text-[15.573px] text-[#a1a1aa]">
                   с включен ДДС
@@ -942,6 +939,11 @@ function Modal({
                 <div className="mt-[16px] grid grid-cols-2 gap-[14px]">
                   {deliveryOptions.map((d) => {
                     const active = delivery === d.key;
+                    // цената на печатния билет идва от настройките в админ панела
+                    const optionPrice =
+                      d.key === "printed" && printedTicketFee > 0
+                        ? `+${fmtPrice(printedTicketFee)} ${CURRENCY}`
+                        : "БЕЗПЛАТНО";
                     return (
                       <button
                         key={d.key}
@@ -968,7 +970,7 @@ function Modal({
                           </span>
                         </span>
                         <span className="font-golos text-[12px] font-bold uppercase tracking-[0.5px] text-forest">
-                          {d.price}
+                          {optionPrice}
                         </span>
                         <span className="font-golos text-[12px] leading-[1.4] text-[#a1a1aa]">
                           {d.hint}
@@ -1053,7 +1055,11 @@ function Modal({
               </div>
               <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
                 {delivery === "printed"
-                  ? `Печатен билет — на касата при пристигане (+${fmtPrice(PRINTED_TICKET_FEE)} ${CURRENCY})`
+                  ? `Печатен билет — на касата при пристигане${
+                      printedTicketFee > 0
+                        ? ` (+${fmtPrice(printedTicketFee)} ${CURRENCY})`
+                        : ""
+                    }`
                   : "Дигитален билет — изпратен по имейл"}
               </div>
               {/* Персонализация от екрана на плащане */}

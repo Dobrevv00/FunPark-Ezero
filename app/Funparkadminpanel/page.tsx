@@ -5,8 +5,15 @@ import { useRouter } from "next/navigation";
 import {
   SLOT_CAPACITY,
   CURRENCY,
+  DEFAULT_PRINTED_FEE,
+  DEFAULT_SEAT_PRICES,
   emptySeats,
+  getPrices,
+  hasCustomPrices,
   priceForSeats,
+  resetPrices,
+  setPrices,
+  type PriceSettings,
   addBlock,
   addSlot,
   addSlotForDay,
@@ -69,6 +76,183 @@ type Draft = {
 
 const inputCls =
   "h-[34px] w-full rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40";
+
+/** Форматиране на цена: „16“, „1,99“, „0“ */
+const priceLabel = (n: number) =>
+  Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ",");
+
+/** Приема „1,99“ и „1.99“; връща null при невалидна стойност */
+const parsePrice = (v: string) => {
+  const raw = v.trim().replace(",", ".");
+  if (raw === "") return null;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0 || n > 10000) return null;
+  return Math.round(n * 100) / 100;
+};
+
+function PricesSection() {
+  const fields = [
+    ...SEAT_TYPES.map((s) => ({ key: s.key as keyof PriceSettings, label: s.label })),
+    { key: "printedFee" as keyof PriceSettings, label: "Такса печатен билет" },
+  ];
+
+  const [current, setCurrent] = useState<PriceSettings>({
+    ...DEFAULT_SEAT_PRICES,
+    printedFee: DEFAULT_PRINTED_FEE,
+  });
+  const [draft, setDraft] = useState<Record<string, string>>({});
+  const [dirty, setDirty] = useState(false);
+  const [custom, setCustom] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    const refresh = () => {
+      const p = getPrices();
+      setCurrent(p);
+      setCustom(hasCustomPrices());
+      // не презаписваме полетата, докато администраторът пише в тях
+      setDirty((isDirty) => {
+        if (!isDirty) {
+          setDraft({
+            light: priceLabel(p.light),
+            mid: priceLabel(p.mid),
+            heavy: priceLabel(p.heavy),
+            printedFee: priceLabel(p.printedFee),
+          });
+        }
+        return isDirty;
+      });
+    };
+    refresh();
+    return subscribeToStore(refresh);
+  }, []);
+
+  const parsed = fields.map((f) => parsePrice(draft[f.key] ?? ""));
+  const allValid = parsed.every((v) => v !== null);
+  const canSave = dirty && allValid;
+
+  const save = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canSave) return;
+    const next = {} as PriceSettings;
+    fields.forEach((f, i) => {
+      next[f.key] = parsed[i] as number;
+    });
+    setPrices(next);
+    setDirty(false);
+    setSaved(true);
+  };
+
+  return (
+    <section className="mb-[24px] rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
+      <h2 className="font-golos text-[20px] font-bold text-ink">
+        Цени на билетите
+        {custom && (
+          <span className="ml-[10px] rounded-full bg-[rgba(122,162,214,0.18)] px-[10px] py-[3px] text-[12px] font-semibold text-[#4b7cb5]">
+            променени
+          </span>
+        )}
+      </h2>
+      <p className="mt-[4px] text-[13px] text-[#545454]">
+        Цената на билета се определя от вида седалка. Тук можете да я промените —
+        новите цени важат веднага за всички нови резервации. Стойност 0 означава
+        безплатен билет. Приемат се и стотинки (напр. 1,99).
+      </p>
+
+      <form onSubmit={save} className="mt-[16px] flex flex-wrap items-end gap-[12px]">
+        {fields.map((f, i) => {
+          const invalid = parsed[i] === null;
+          return (
+            <label
+              key={f.key}
+              className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]"
+            >
+              {f.label} ({CURRENCY})
+              <input
+                type="text"
+                inputMode="decimal"
+                value={draft[f.key] ?? ""}
+                onChange={(e) => {
+                  setDraft((d) => ({ ...d, [f.key]: e.target.value }));
+                  setDirty(true);
+                  setSaved(false);
+                }}
+                className={`${inputCls} w-[150px] font-semibold ${
+                  invalid ? "text-red-600 ring-2 ring-red-400" : "text-ink"
+                }`}
+              />
+            </label>
+          );
+        })}
+        <button
+          type="submit"
+          disabled={!canSave}
+          className={`h-[34px] rounded-[10px] px-[24px] text-[14px] font-semibold transition-colors ${
+            canSave
+              ? "cursor-pointer bg-sun text-black/80 hover:bg-[#e0b32f]"
+              : "cursor-not-allowed bg-[#e6e4de] text-[#a1a1aa]"
+          }`}
+        >
+          Запази
+        </button>
+        {!allValid && (
+          <p className="w-full text-[13px] text-red-600">
+            Цената трябва да е число, по-голямо или равно на 0.
+          </p>
+        )}
+        {saved && (
+          <p className="w-full text-[13px] font-semibold text-forest">
+            Цените са запазени.
+          </p>
+        )}
+      </form>
+
+      <div className="mt-[16px] flex flex-wrap items-center gap-[8px]">
+        {SEAT_TYPES.map((s) => (
+          <span
+            key={s.key}
+            className="rounded-full bg-white px-[12px] py-[6px] text-[13px] text-[#3f3f46]"
+          >
+            {s.label}:{" "}
+            <span className="font-semibold text-forest">
+              {current[s.key] === 0
+                ? "безплатно"
+                : `${priceLabel(current[s.key])} ${CURRENCY}`}
+            </span>
+          </span>
+        ))}
+        <span className="rounded-full bg-white px-[12px] py-[6px] text-[13px] text-[#3f3f46]">
+          Печатен билет:{" "}
+          <span className="font-semibold text-forest">
+            {current.printedFee === 0
+              ? "безплатно"
+              : `+${priceLabel(current.printedFee)} ${CURRENCY}`}
+          </span>
+        </span>
+      </div>
+
+      <p className="mt-[12px] text-[12px] text-[#a1a1aa]">
+        Вече направените резервации запазват сумата, с която са платени. Ако
+        редактирате стара резервация, сумата ще се преизчисли по новите цени.
+      </p>
+
+      {custom && (
+        <button
+          type="button"
+          onClick={() => {
+            resetPrices();
+            setDirty(false);
+            setSaved(false);
+          }}
+          className="mt-[10px] cursor-pointer text-[12px] font-semibold text-[#a1a1aa] underline transition-colors hover:text-red-600"
+        >
+          Върни цените по подразбиране ({SEAT_TYPES.map((s) => priceLabel(DEFAULT_SEAT_PRICES[s.key])).join(" / ")}{" "}
+          {CURRENCY}, такса {priceLabel(DEFAULT_PRINTED_FEE)} {CURRENCY})
+        </button>
+      )}
+    </section>
+  );
+}
 
 function CapacitySection() {
   const [overrides, setOverrides] = useState<Record<string, SeatCounts>>({});
@@ -791,12 +975,19 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
           ))}
         </div>
 
-        {view === "calendar" && <AdminCalendar />}
+        {view === "calendar" && (
+          <>
+            <AdminCalendar />
+            {/* цените са достъпни и от двата изгледа */}
+            <PricesSection />
+          </>
+        )}
 
         {view === "list" && (
           <>
             <SlotsSection />
             <CapacitySection />
+            <PricesSection />
             <BlockSection />
 
         {/* Регистър */}

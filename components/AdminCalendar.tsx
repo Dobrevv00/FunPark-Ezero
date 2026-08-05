@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import {
   SEAT_TYPES,
   CURRENCY,
-  SEAT_PRICES,
+  seatPrice,
   emptySeats,
   priceForSeats,
   addBlock,
@@ -292,9 +292,9 @@ function EditBookingModal({
             >
               {s.label}{" "}
               <span className="text-[11px] font-normal text-[#a1a1aa]">
-                {SEAT_PRICES[s.key] === 0
+                {seatPrice(s.key) === 0
                   ? "безплатно"
-                  : `${SEAT_PRICES[s.key]} ${CURRENCY}`}
+                  : `${seatPrice(s.key).toLocaleString("bg-BG")} ${CURRENCY}`}
               </span>
               <input
                 type="number"
@@ -315,7 +315,7 @@ function EditBookingModal({
         </div>
 
         <p className="mt-[16px] font-golos text-[15px] font-bold text-ink">
-          Сума: {total} {CURRENCY}
+          Сума: {total.toLocaleString("bg-BG")} {CURRENCY}
         </p>
 
         <div className="mt-[20px] flex justify-end gap-[10px]">

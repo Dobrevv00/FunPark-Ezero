@@ -56,24 +56,77 @@ const SLOTS_KEY = "fpe-slots";
 const DAY_SLOTS_KEY = "fpe-day-slots";
 const CAPACITY_KEY = "fpe-capacity";
 const BLOCKED_KEY = "fpe-blocked";
+const PRICES_KEY = "fpe-prices";
 
 /** Максимален брой резервации за един времеви слот */
 export const SLOT_CAPACITY = 20;
 
-/** Цена на билет в евро според вида седалка */
-export const SEAT_PRICES: Record<SeatKey, number> = {
+/** Цени по подразбиране в евро според вида седалка */
+export const DEFAULT_SEAT_PRICES: Record<SeatKey, number> = {
   light: 0, // До 30 кг — безплатно
   mid: 16, // От 30 до 60 кг
   heavy: 28, // От 60 до 140 кг
 };
 
+/** Такса за печатен билет по подразбиране (евро) */
+export const DEFAULT_PRINTED_FEE = 1.99;
+
 export const CURRENCY = "€";
 
+export type PriceSettings = Record<SeatKey, number> & { printedFee: number };
+
+const DEFAULT_PRICES: PriceSettings = {
+  ...DEFAULT_SEAT_PRICES,
+  printedFee: DEFAULT_PRINTED_FEE,
+};
+
+/**
+ * Цените се променят от админ панела и се пазят в localStorage.
+ * При липса на записани цени важат тези по подразбиране.
+ */
+export function getPrices(): PriceSettings {
+  if (typeof window === "undefined") return { ...DEFAULT_PRICES };
+  try {
+    const raw = JSON.parse(localStorage.getItem(PRICES_KEY) ?? "null");
+    if (!raw || typeof raw !== "object") return { ...DEFAULT_PRICES };
+    const out = { ...DEFAULT_PRICES };
+    for (const key of Object.keys(DEFAULT_PRICES) as (keyof PriceSettings)[]) {
+      const v = Number(raw[key]);
+      if (Number.isFinite(v) && v >= 0) out[key] = Math.round(v * 100) / 100;
+    }
+    return out;
+  } catch {
+    return { ...DEFAULT_PRICES };
+  }
+}
+
+export function setPrices(prices: PriceSettings) {
+  localStorage.setItem(PRICES_KEY, JSON.stringify(prices));
+  emitChange();
+}
+
+/** Връща цените към стойностите по подразбиране */
+export function resetPrices() {
+  localStorage.removeItem(PRICES_KEY);
+  emitChange();
+}
+
+/** Има ли записани (променени от админ) цени */
+export const hasCustomPrices = () =>
+  typeof window !== "undefined" && localStorage.getItem(PRICES_KEY) !== null;
+
+/** Цена на един билет според вида седалка (по текущите настройки) */
+export const seatPrice = (key: SeatKey) => getPrices()[key];
+
+/** Такса за печатен билет (по текущите настройки) */
+export const printedFee = () => getPrices().printedFee;
+
 /** Обща сума в евро за избраните места по видове седалки */
-export const priceForSeats = (s: SeatCounts) =>
-  s.light * SEAT_PRICES.light +
-  s.mid * SEAT_PRICES.mid +
-  s.heavy * SEAT_PRICES.heavy;
+export const priceForSeats = (s: SeatCounts) => {
+  const p = getPrices();
+  const sum = s.light * p.light + s.mid * p.mid + s.heavy * p.heavy;
+  return Math.round(sum * 100) / 100;
+};
 
 export const defaultSlots = [
   "09:00", "09:30", "10:00", "10:30",
