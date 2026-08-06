@@ -206,13 +206,6 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/Funparkadminpanel"
-            onClick={() => setMenuOpen(false)}
-            className="text-[20px] font-semibold leading-[26px] text-[#444444] transition-colors hover:text-leaf"
-          >
-            Админ
-          </Link>
         </nav>
 
         <div className="mt-auto flex items-center justify-center gap-[32px] pb-[56px]">
@@ -247,12 +240,6 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-          <Link
-            href="/Funparkadminpanel"
-            className="text-[16px] font-semibold leading-[20px] text-[#444444] transition-colors hover:text-leaf"
-          >
-            Админ
-          </Link>
         </nav>
 
         <div className="ml-auto flex items-center">
