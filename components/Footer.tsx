@@ -28,6 +28,41 @@ const contacts = [
   { icon: "/icons/mail.svg", w: 14, h: 11, text: "info@funparkzero.bg" },
 ];
 
+/** Социални мрежи — светли икони за тъмния фон на футъра */
+const socials = [
+  {
+    src: "/icons/facebook-light.svg",
+    alt: "Facebook",
+    className: "h-[22px] w-[10px]",
+    href: "https://www.facebook.com/p/Fun-Park-Ezero-61577261426366/",
+  },
+  {
+    src: "/icons/instagram-light.svg",
+    alt: "Instagram",
+    className: "h-[22px] w-[22px]",
+    href: "https://www.instagram.com/fun_park_ezero/",
+  },
+];
+
+function Socials({ className = "" }: { className?: string }) {
+  return (
+    <div className={`flex items-center gap-[24px] ${className}`}>
+      {socials.map((s) => (
+        <a
+          key={s.alt}
+          href={s.href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={s.alt}
+          className="transition-opacity hover:opacity-60"
+        >
+          <img src={s.src} alt="" className={s.className} />
+        </a>
+      ))}
+    </div>
+  );
+}
+
 const mobileContacts = [
   { icon: "/icons/location.svg", w: 12, h: 15, text: "ул. Езерна 1, Бургас" },
   { icon: "/icons/call.svg", w: 12, h: 12, text: "+359 88 123 4567" },
@@ -89,7 +124,7 @@ export default function Footer() {
   return (
     <footer className="bg-forest">
       {/* Мобилен вариант */}
-      <div className="flex h-[550px] flex-col items-center pt-[30px] lg:hidden">
+      <div className="flex min-h-[550px] flex-col items-center pb-[30px] pt-[30px] lg:hidden">
         <FooterLogo ring={70} inner={64} logoW={49.6} logoH={33.7} />
         <p className="mt-[12px] w-[219px] text-center font-golos text-[12.7px] leading-[13px] text-white/45">
           Незабравими преживявания сред природата за цялото семейство.
@@ -132,6 +167,9 @@ export default function Footer() {
             ))}
           </ul>
         </div>
+
+        {/* Социални мрежи */}
+        <Socials className="mt-[26px] justify-center" />
       </div>
 
       {/* Десктоп вариант */}
@@ -142,6 +180,9 @@ export default function Footer() {
         <p className="absolute left-[103px] top-[188px] w-[219px] text-center font-golos text-[13px] leading-[21.125px] text-white/55">
           Незабравими преживявания сред природата за цялото семейство.
         </p>
+
+        {/* Социални мрежи — под текста, центрирани спрямо логото */}
+        <Socials className="absolute left-[103px] top-[258px] w-[219px] justify-center" />
 
         {/* Колони с линкове */}
         {columns.map((col) => (
