@@ -73,8 +73,11 @@ type Draft = {
   seats: SeatCounts;
 };
 
-const inputCls =
-  "h-[34px] w-full rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40";
+/** Поле без зададена ширина — ширината се подава на място (виж inputCls) */
+const inputBase =
+  "h-[34px] rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40";
+
+const inputCls = `${inputBase} w-full`;
 
 /** Форматиране на цена: „16“, „1,99“, „0“ */
 const priceLabel = (n: number) =>
@@ -911,6 +914,189 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     b.createdAt.localeCompare(a.createdAt)
   );
 
+  /* --- Клетки на регистъра: едни и същи за таблицата и за мобилните карти --- */
+
+  const statusBadge = (b: BookingRecord) =>
+    b.confirmed ? (
+      <span className="inline-flex items-center gap-[5px] whitespace-nowrap rounded-full bg-[rgba(106,142,78,0.15)] px-[10px] py-[4px] text-[12px] font-semibold text-forest">
+        ✓ Потвърдена
+      </span>
+    ) : (
+      <span className="inline-flex items-center whitespace-nowrap rounded-full bg-[rgba(244,198,63,0.2)] px-[10px] py-[4px] text-[12px] font-semibold text-[#8a6d1a]">
+        Чакаща
+      </span>
+    );
+
+  const cellWhen = (b: BookingRecord, isEditing: boolean) =>
+    isEditing && draft ? (
+      <div className="flex flex-wrap gap-[6px]">
+        <input
+          type="date"
+          value={draft.dateKey}
+          onChange={(e) => setField("dateKey", e.target.value)}
+          className={`${inputBase} w-[140px]`}
+        />
+        <input
+          type="time"
+          value={draft.time}
+          onChange={(e) => setField("time", e.target.value)}
+          className={`${inputBase} w-[100px]`}
+        />
+      </div>
+    ) : (
+      <>
+        <span className="block whitespace-nowrap">{b.dateLabel}</span>
+        <span className="mt-[3px] block font-golos font-semibold text-ink">
+          {b.time} ч
+        </span>
+      </>
+    );
+
+  const cellSeats = (b: BookingRecord, isEditing: boolean) =>
+    isEditing && draft ? (
+      <div className="flex flex-col gap-[6px]">
+        {SEAT_TYPES.map((s) => (
+          <div key={s.key}>{seatInput(s.key, s.label)}</div>
+        ))}
+        <p className="text-[12px] font-semibold text-forest">
+          Общо: {seatsTotal(draft.seats)}{" "}
+          {seatsTotal(draft.seats) === 1 ? "място" : "места"}
+        </p>
+      </div>
+    ) : (
+      <>
+        <span className="block whitespace-nowrap font-semibold">
+          {b.places ?? 1} {(b.places ?? 1) === 1 ? "място" : "места"}
+        </span>
+        <span className="mt-[3px] block max-w-[190px] text-[12px] leading-[1.4] text-[#545454]">
+          {ticketsLabel(b)}
+        </span>
+      </>
+    );
+
+  const cellClient = (b: BookingRecord, isEditing: boolean) =>
+    isEditing && draft ? (
+      <input
+        type="text"
+        value={draft.name}
+        onChange={(e) => setField("name", e.target.value)}
+        className={`${inputBase} w-full min-w-[130px]`}
+      />
+    ) : (
+      <>
+        <span className="block">{b.name}</span>
+        {/* персонализация от стъпка „Плащане“ */}
+        {(b.giftFor || b.giftMessage) && (
+          <span className="mt-[4px] block max-w-[200px] text-[11.5px] leading-[1.4] text-[#8a6d1a]">
+            {b.giftFor && <>🎁 За: {b.giftFor}</>}
+            {b.giftMessage && (
+              <span className="block italic">„{b.giftMessage}“</span>
+            )}
+          </span>
+        )}
+      </>
+    );
+
+  const cellContact = (b: BookingRecord, isEditing: boolean) =>
+    isEditing && draft ? (
+      <div className="flex flex-col gap-[6px]">
+        <input
+          type="tel"
+          value={draft.phone}
+          onChange={(e) => setField("phone", e.target.value)}
+          className={`${inputBase} w-full min-w-[130px]`}
+        />
+        <input
+          type="email"
+          value={draft.email}
+          onChange={(e) => setField("email", e.target.value)}
+          className={`${inputBase} w-full min-w-[130px]`}
+        />
+      </div>
+    ) : (
+      <>
+        <a
+          href={`tel:${b.phone}`}
+          className="block whitespace-nowrap transition-colors hover:text-forest"
+        >
+          {b.phone}
+        </a>
+        <a
+          href={`mailto:${b.email}`}
+          className="mt-[3px] block break-all text-[12.5px] text-[#545454] transition-colors hover:text-forest"
+        >
+          {b.email}
+        </a>
+      </>
+    );
+
+  const cellMoney = (b: BookingRecord, isEditing: boolean) => (
+    <>
+      <span className="block whitespace-nowrap font-semibold">
+        {(isEditing ? draftTotal : b.total).toLocaleString("bg-BG")} {CURRENCY}
+      </span>
+      <span className="mt-[3px] block whitespace-nowrap text-[11.5px] text-[#a1a1aa]">
+        {new Date(b.createdAt).toLocaleString("bg-BG", {
+          dateStyle: "short",
+          timeStyle: "short",
+        })}
+      </span>
+    </>
+  );
+
+  const actionBtn = "rounded-[8px] px-[12px] py-[6px] text-[12px] font-semibold";
+
+  const cellActions = (b: BookingRecord, isEditing: boolean) =>
+    b.confirmed ? (
+      <span className="whitespace-nowrap text-[12px] text-[#a1a1aa]">
+        🔒 Заключена
+      </span>
+    ) : isEditing ? (
+      <div className="flex flex-wrap gap-[6px] lg:flex-col">
+        <button
+          type="button"
+          disabled={!canSave}
+          className={`${actionBtn} bg-forest text-white transition-colors ${
+            canSave ? "cursor-pointer hover:bg-pine" : "cursor-not-allowed opacity-50"
+          }`}
+          onClick={saveEdit}
+        >
+          Запази
+        </button>
+        <button
+          type="button"
+          className={`${actionBtn} cursor-pointer border border-[#dddad2] text-[#3f3f46] transition-colors hover:bg-black/5`}
+          onClick={cancelEdit}
+        >
+          Отказ
+        </button>
+      </div>
+    ) : (
+      <div className="flex flex-wrap gap-[6px] lg:flex-col">
+        <button
+          type="button"
+          className={`${actionBtn} cursor-pointer bg-forest text-white transition-colors hover:bg-pine`}
+          onClick={() => setConfirmId(b.id)}
+        >
+          Потвърди
+        </button>
+        <button
+          type="button"
+          className={`${actionBtn} cursor-pointer border border-[#dddad2] text-[#3f3f46] transition-colors hover:border-forest hover:text-forest`}
+          onClick={() => startEdit(b)}
+        >
+          Редактирай
+        </button>
+        <button
+          type="button"
+          className={`${actionBtn} cursor-pointer border border-red-200 text-red-600 transition-colors hover:bg-red-50`}
+          onClick={() => deleteBooking(b.id)}
+        >
+          Изтрий
+        </button>
+      </div>
+    );
+
   return (
     <div className="min-h-screen bg-[#f5f5f7] pb-[60px]">
       {/* Горна лента */}
@@ -969,7 +1155,7 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
             <BlockSection />
 
         {/* Регистър */}
-        <section className="rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
+        <section className="rounded-[10px] bg-offwhite p-[16px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)] sm:p-[24px]">
           <h2 className="font-golos text-[20px] font-bold text-ink">
             Регистър
             <span className="ml-[10px] font-golos text-[14px] font-medium text-[#a1a1aa]">
@@ -982,229 +1168,106 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
               Още няма направени резервации.
             </p>
           ) : (
-            <div className="mt-[16px] overflow-x-auto">
-              <table className="w-full min-w-[960px] border-collapse text-left text-[13.5px]">
-                <thead>
-                  <tr className="border-b border-[#eceae4] font-golos text-[12px] uppercase tracking-[0.6px] text-[#a1a1aa]">
-                    <th className="py-[10px] pr-[12px]">№</th>
-                    <th className="py-[10px] pr-[12px]">Дата</th>
-                    <th className="py-[10px] pr-[12px]">Час</th>
-                    <th className="py-[10px] pr-[12px]">Места</th>
-                    <th className="py-[10px] pr-[12px]">Седалка</th>
-                    <th className="py-[10px] pr-[12px]">Име</th>
-                    <th className="py-[10px] pr-[12px]">Телефон</th>
-                    <th className="py-[10px] pr-[12px]">Имейл</th>
-                    <th className="py-[10px] pr-[12px]">Билети</th>
-                    <th className="py-[10px] pr-[12px]">Сума</th>
-                    <th className="py-[10px] pr-[12px]">Направена на</th>
-                    <th className="py-[10px] pr-[12px]">Статус</th>
-                    <th className="py-[10px]" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {sortedBookings.map((b) => {
-                    const isEditing = editingId === b.id && draft !== null;
-                    return (
-                      <tr
-                        key={b.id}
-                        className={`border-b border-[#eceae4] align-middle text-ink ${
-                          isEditing ? "bg-[rgba(244,198,63,0.08)]" : ""
-                        }`}
-                      >
-                        <td className="py-[12px] pr-[12px] font-golos font-medium text-forest">
+            <>
+              {/* Десктоп — таблица с обединени колони, за да се чете на един ред */}
+              <div className="mt-[16px] hidden overflow-x-auto lg:block">
+                <table className="w-full border-collapse text-left text-[13px]">
+                  <thead>
+                    <tr className="border-b border-[#eceae4] font-golos text-[11px] uppercase tracking-[0.6px] text-[#a1a1aa]">
+                      <th className="py-[10px] pr-[10px]">№</th>
+                      <th className="py-[10px] pr-[10px]">Кога</th>
+                      <th className="py-[10px] pr-[10px]">Места</th>
+                      <th className="py-[10px] pr-[10px]">Клиент</th>
+                      <th className="py-[10px] pr-[10px]">Контакт</th>
+                      <th className="py-[10px] pr-[10px]">Сума</th>
+                      <th className="py-[10px]" />
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sortedBookings.map((b) => {
+                      const isEditing = editingId === b.id && draft !== null;
+                      return (
+                        <tr
+                          key={b.id}
+                          className={`border-b border-[#eceae4] align-top text-ink ${
+                            isEditing ? "bg-[rgba(244,198,63,0.08)]" : ""
+                          }`}
+                        >
+                          <td className="py-[14px] pr-[10px]">
+                            <span className="block whitespace-nowrap font-golos font-medium text-forest">
+                              {b.id}
+                            </span>
+                            <span className="mt-[6px] block">
+                              {statusBadge(b)}
+                            </span>
+                          </td>
+                          <td className="py-[14px] pr-[10px]">
+                            {cellWhen(b, isEditing)}
+                          </td>
+                          <td className="py-[14px] pr-[10px]">
+                            {cellSeats(b, isEditing)}
+                          </td>
+                          <td className="py-[14px] pr-[10px]">
+                            {cellClient(b, isEditing)}
+                          </td>
+                          <td className="py-[14px] pr-[10px]">
+                            {cellContact(b, isEditing)}
+                          </td>
+                          <td className="py-[14px] pr-[10px]">
+                            {cellMoney(b, isEditing)}
+                          </td>
+                          <td className="py-[14px]">
+                            {cellActions(b, isEditing)}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Мобилно — по една карта на резервация */}
+              <div className="mt-[16px] flex flex-col gap-[12px] lg:hidden">
+                {sortedBookings.map((b) => {
+                  const isEditing = editingId === b.id && draft !== null;
+                  const rows = [
+                    { l: "Кога", v: cellWhen(b, isEditing) },
+                    { l: "Места", v: cellSeats(b, isEditing) },
+                    { l: "Клиент", v: cellClient(b, isEditing) },
+                    { l: "Контакт", v: cellContact(b, isEditing) },
+                    { l: "Сума", v: cellMoney(b, isEditing) },
+                  ];
+                  return (
+                    <div
+                      key={b.id}
+                      className={`rounded-[10px] border p-[14px] ${
+                        isEditing
+                          ? "border-sun bg-[rgba(244,198,63,0.08)]"
+                          : "border-[#e6e4de] bg-white"
+                      }`}
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-[8px]">
+                        <span className="font-golos text-[14px] font-semibold text-forest">
                           {b.id}
-                        </td>
-                        <td className="py-[12px] pr-[12px]">
-                          {isEditing ? (
-                            <input
-                              type="date"
-                              value={draft.dateKey}
-                              onChange={(e) => setField("dateKey", e.target.value)}
-                              className={`${inputCls} w-[140px]`}
-                            />
-                          ) : (
-                            b.dateLabel
-                          )}
-                        </td>
-                        <td className="py-[12px] pr-[12px]">
-                          {isEditing ? (
-                            <input
-                              type="time"
-                              value={draft.time}
-                              onChange={(e) => setField("time", e.target.value)}
-                              className={`${inputCls} w-[96px]`}
-                            />
-                          ) : (
-                            b.time
-                          )}
-                        </td>
-                        <td className="py-[12px] pr-[12px]">
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              min={1}
-                              max={200}
-                              value={draft.places}
-                              onChange={(e) =>
-                                setField(
-                                  "places",
-                                  Math.max(1, Number(e.target.value) || 1)
-                                )
-                              }
-                              className={`${inputCls} w-[64px]`}
-                            />
-                          ) : (
-                            (b.places ?? 1)
-                          )}
-                        </td>
-                        <td className="py-[12px] pr-[12px] whitespace-nowrap">
-                          {b.seats
-                            ? SEAT_TYPES.filter((s) => b.seats[s.key] > 0)
-                                .map((s) => `${s.label} ×${b.seats[s.key]}`)
-                                .join(", ") || "—"
-                            : "—"}
-                        </td>
-                        <td className="py-[12px] pr-[12px]">
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              value={draft.name}
-                              onChange={(e) => setField("name", e.target.value)}
-                              className={`${inputCls} min-w-[120px]`}
-                            />
-                          ) : (
-                            <>
-                              {b.name}
-                              {/* персонализация от стъпка „Плащане“ */}
-                              {(b.giftFor || b.giftMessage) && (
-                                <span className="mt-[4px] block max-w-[190px] text-[11.5px] leading-[1.4] text-[#8a6d1a]">
-                                  {b.giftFor && <>🎁 За: {b.giftFor}</>}
-                                  {b.giftMessage && (
-                                    <span className="block italic">
-                                      „{b.giftMessage}“
-                                    </span>
-                                  )}
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </td>
-                        <td className="py-[12px] pr-[12px]">
-                          {isEditing ? (
-                            <input
-                              type="tel"
-                              value={draft.phone}
-                              onChange={(e) => setField("phone", e.target.value)}
-                              className={`${inputCls} min-w-[110px]`}
-                            />
-                          ) : (
-                            b.phone
-                          )}
-                        </td>
-                        <td className="py-[12px] pr-[12px]">
-                          {isEditing ? (
-                            <input
-                              type="email"
-                              value={draft.email}
-                              onChange={(e) => setField("email", e.target.value)}
-                              className={`${inputCls} min-w-[150px]`}
-                            />
-                          ) : (
-                            b.email
-                          )}
-                        </td>
-                        <td className="py-[12px] pr-[12px]">
-                          {isEditing ? (
-                            <div className="flex flex-col gap-[6px]">
-                              {SEAT_TYPES.map((s) => (
-                                <div key={s.key}>{seatInput(s.key, s.label)}</div>
-                              ))}
-                            </div>
-                          ) : (
-                            ticketsLabel(b)
-                          )}
-                        </td>
-                        <td className="py-[12px] pr-[12px] font-semibold">
-                          {isEditing
-                            ? `${draftTotal.toLocaleString("bg-BG")} ${CURRENCY}`
-                            : `${b.total.toLocaleString("bg-BG")} ${CURRENCY}`}
-                        </td>
-                        <td className="py-[12px] pr-[12px] text-[#545454]">
-                          {new Date(b.createdAt).toLocaleString("bg-BG", {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
-                        </td>
-                        <td className="py-[12px] pr-[12px] whitespace-nowrap">
-                          {b.confirmed ? (
-                            <span className="inline-flex items-center gap-[5px] rounded-full bg-[rgba(106,142,78,0.15)] px-[10px] py-[4px] text-[12px] font-semibold text-forest">
-                              ✓ Потвърдена
+                        </span>
+                        {statusBadge(b)}
+                      </div>
+                      <div className="mt-[12px] flex flex-col gap-[10px]">
+                        {rows.map((row) => (
+                          <div key={row.l} className="flex flex-col gap-[3px]">
+                            <span className="font-golos text-[10.5px] font-semibold uppercase tracking-[1.1px] text-[#a1a1aa]">
+                              {row.l}
                             </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full bg-[rgba(244,198,63,0.2)] px-[10px] py-[4px] text-[12px] font-semibold text-[#8a6d1a]">
-                              Чакаща
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-[12px]">
-                          {b.confirmed ? (
-                            <span className="text-[12px] text-[#a1a1aa]">
-                              🔒 Заключена
-                            </span>
-                          ) : isEditing ? (
-                            <div className="flex flex-col gap-[6px]">
-                              <button
-                                type="button"
-                                disabled={!canSave}
-                                className={`rounded-[8px] bg-forest px-[12px] py-[5px] text-[12px] font-semibold text-white transition-colors ${
-                                  canSave
-                                    ? "cursor-pointer hover:bg-pine"
-                                    : "cursor-not-allowed opacity-50"
-                                }`}
-                                onClick={saveEdit}
-                              >
-                                Запази
-                              </button>
-                              <button
-                                type="button"
-                                className="cursor-pointer rounded-[8px] border border-[#dddad2] px-[12px] py-[5px] text-[12px] font-semibold text-[#3f3f46] transition-colors hover:bg-black/5"
-                                onClick={cancelEdit}
-                              >
-                                Отказ
-                              </button>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col gap-[6px]">
-                              <button
-                                type="button"
-                                className="cursor-pointer rounded-[8px] bg-forest px-[12px] py-[5px] text-[12px] font-semibold text-white transition-colors hover:bg-pine"
-                                onClick={() => setConfirmId(b.id)}
-                              >
-                                Потвърди
-                              </button>
-                              <button
-                                type="button"
-                                className="cursor-pointer rounded-[8px] border border-[#dddad2] px-[12px] py-[5px] text-[12px] font-semibold text-[#3f3f46] transition-colors hover:border-forest hover:text-forest"
-                                onClick={() => startEdit(b)}
-                              >
-                                Редактирай
-                              </button>
-                              <button
-                                type="button"
-                                className="cursor-pointer rounded-[8px] border border-red-200 px-[12px] py-[5px] text-[12px] font-semibold text-red-600 transition-colors hover:bg-red-50"
-                                onClick={() => deleteBooking(b.id)}
-                              >
-                                Изтрий
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                            <div className="text-[13.5px] text-ink">{row.v}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-[14px]">{cellActions(b, isEditing)}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
           )}
         </section>
           </>
