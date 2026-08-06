@@ -60,7 +60,8 @@ export default function RestaurantSection() {
         </div>
 
         {/* Галерия */}
-        <div className="relative mx-auto mt-[97px] h-[443px] max-w-[1512px]">
+        {/* височината следва най-високата картичка (410px) + малък луфт за hover */}
+        <div className="relative mx-auto mt-[97px] h-[420px] max-w-[1512px]">
           {[
             "left-[-23px] top-[33px] h-[364.289px] w-[485.719px]",
             "left-[calc(25%+106.72px)] top-0 h-[410px] w-[547px]",

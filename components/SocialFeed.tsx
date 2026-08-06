@@ -14,8 +14,12 @@ const socials = [
     className: "h-[22px] w-[10px]",
     href: "https://www.facebook.com/p/Fun-Park-Ezero-61577261426366/",
   },
-  { src: "/icons/twitter-light.svg", alt: "Twitter", className: "h-[20px] w-[22px]", href: "#" },
-  { src: "/icons/instagram-light.svg", alt: "Instagram", className: "h-[22px] w-[22px]", href: "#" },
+  {
+    src: "/icons/instagram-light.svg",
+    alt: "Instagram",
+    className: "h-[22px] w-[22px]",
+    href: "https://www.instagram.com/fun_park_ezero/",
+  },
 ];
 
 function TikTokCard({
@@ -76,7 +80,7 @@ function TikTokCard({
 
 export default function SocialFeed() {
   return (
-    <section className="mt-[120px] bg-forest lg:mt-[550px]">
+    <section className="mt-[120px] bg-forest lg:mt-[180px]">
       {/* Мобилен вариант */}
       <div className="relative h-[836px] lg:hidden">
         <h2 className="absolute left-[16px] top-[62px] font-golos text-[23px] font-extrabold leading-[35.02px] text-white">

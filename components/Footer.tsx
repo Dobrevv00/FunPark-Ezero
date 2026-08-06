@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const menuItems = [
   { label: "Начало", href: "/" },
   { label: "Събития", href: "/events" },
@@ -44,8 +46,19 @@ function FooterLogo({
   logoH: number;
 }) {
   return (
-    <div className="relative" style={{ width: ring, height: ring }}>
-      <img src="/icons/footer-ring-outer.svg" alt="" className="absolute inset-0 size-full" />
+    // логото води към началото на главната страница
+    <Link
+      href="/"
+      aria-label="Към началото на страницата"
+      title="Към началото на страницата"
+      className="group relative block transition-transform duration-300 ease-out hover:scale-[1.07] active:scale-95 active:duration-100"
+      style={{ width: ring, height: ring }}
+    >
+      <img
+        src="/icons/footer-ring-outer.svg"
+        alt=""
+        className="absolute inset-0 size-full transition-opacity duration-300 group-hover:opacity-70"
+      />
       <img
         src="/icons/footer-ring-inner.svg"
         alt=""
@@ -68,7 +81,7 @@ function FooterLogo({
           <img src="/icons/logo-leaf-footer.svg" alt="" className="size-full" />
         </span>
       </div>
-    </div>
+    </Link>
   );
 }
 

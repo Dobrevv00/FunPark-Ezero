@@ -21,8 +21,12 @@ const socials = [
     className: "h-[20px] w-[10px]",
     href: "https://www.facebook.com/p/Fun-Park-Ezero-61577261426366/",
   },
-  { src: "/icons/twitter.svg", alt: "Twitter", className: "h-[18px] w-[22px]", href: "#" },
-  { src: "/icons/instagram.svg", alt: "Instagram", className: "h-[22px] w-[22px]", href: "#" },
+  {
+    src: "/icons/instagram.svg",
+    alt: "Instagram",
+    className: "h-[22px] w-[22px]",
+    href: "https://www.instagram.com/fun_park_ezero/",
+  },
 ];
 
 type SearchEntry = {
