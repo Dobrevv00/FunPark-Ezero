@@ -37,12 +37,12 @@ export default function Hero() {
 
       {/* Мобилно съдържание */}
       <div className="relative h-full lg:hidden">
-        <h1 className="absolute left-[16px] top-[420px] font-golos text-[35px] font-black leading-[1.04] text-offwhite">
+        <h1 className="absolute inset-x-[16px] top-[420px] text-center font-golos text-[35px] font-black leading-[1.04] text-offwhite">
           Изживей
           <br />
           приключението
         </h1>
-        <p className="absolute left-[16px] top-[506px] w-[375px] max-w-[calc(100%-32px)] font-golos text-[14px] font-semibold leading-[1.44] text-[rgba(255,254,254,0.92)]">
+        <p className="absolute inset-x-[16px] top-[506px] mx-auto max-w-[375px] text-center font-golos text-[14px] font-semibold leading-[1.44] text-[rgba(255,254,254,0.92)]">
           Забавление, природа и незабравими моменти за цялото семейство, всичко
           на едно място.
         </p>

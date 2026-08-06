@@ -229,7 +229,7 @@ export default function Header() {
       </div>
 
       {/* Десктоп навигация */}
-      <div className="mx-auto hidden h-[75px] w-full max-w-[1512px] items-center pl-[50px] pr-[37px] lg:flex">
+      <div className="mx-auto hidden h-[92px] w-full max-w-[1512px] items-center pl-[50px] pr-[37px] lg:flex">
         <Logo className="h-[42px] w-[62px]" />
 
         <nav className="ml-[43px] flex items-center gap-[32px]">

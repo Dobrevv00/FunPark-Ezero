@@ -256,7 +256,7 @@ export default function EventsPage() {
         {/* ===== Мобилна версия ===== */}
         <div className="lg:hidden">
           {/* Херо */}
-          <section className="flex flex-col items-start gap-[16px] bg-cream px-[20px] py-[48px]">
+          <section className="flex flex-col items-center gap-[16px] bg-cream px-[20px] py-[48px] text-center">
             <span className="rounded-full border-[1.5px] border-[#7fac2a] px-[16px] py-[7px] font-golos text-[11px] font-semibold leading-none tracking-[1.5px] text-pine">
               КАЛЕНДАР
             </span>
@@ -270,12 +270,13 @@ export default function EventsPage() {
           </section>
 
           {/* Филтри */}
-          <div className="flex gap-[8px] overflow-x-auto px-[20px] pb-[8px] pt-[24px]">
+          {/* центрирани филтри — при тесен екран се пренасят на нов ред вместо да се скролват */}
+          <div className="flex flex-wrap justify-center gap-[8px] px-[20px] pb-[8px] pt-[24px]">
             {mobileFilters.map((f) => (
               <button
                 key={f.label}
                 type="button"
-                className={`shrink-0 cursor-pointer rounded-full px-[16px] py-[9px] font-golos text-[13px] font-semibold leading-none transition-colors ${
+                className={`shrink-0 cursor-pointer rounded-full px-[13px] py-[9px] font-golos text-[13px] font-semibold leading-none transition-colors ${
                   f.active
                     ? "bg-pine text-offwhite hover:bg-forest"
                     : "border border-[#a1a1aa] text-[#3f3f46] hover:bg-black/5"

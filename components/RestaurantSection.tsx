@@ -22,11 +22,11 @@ export default function RestaurantSection() {
             Ресторант
           </span>
         </div>
-        <div className="px-[16px]">
+        <div className="px-[16px] text-center">
           <h2 className="mt-[33px] font-golos text-[23px] font-bold leading-[37.435px] text-ink">
             Вкусове от природата
           </h2>
-          <p className="mt-[8px] max-w-[318px] text-[12.697px] leading-[19.046px] text-ink">
+          <p className="mx-auto mt-[8px] max-w-[318px] text-[12.697px] leading-[19.046px] text-ink">
             Вижте най-добрите моменти от нашите гости @funparkezero
           </p>
         </div>
