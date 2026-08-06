@@ -16,7 +16,7 @@ const infoColumns = [
     icon: "/icons/location-w.svg",
     iconClass: "h-[24px] w-[20px]",
     label: "Локация",
-    lines: ["442 Architectural Blvd,", "Suite 900 New York, NY"],
+    lines: ["ул. „Димитър Димов“,", "8000 Бургас"],
   },
   {
     icon: "/icons/call-w.svg",
@@ -28,7 +28,7 @@ const infoColumns = [
     icon: "/icons/schedule-w.svg",
     iconClass: "size-[31px]",
     label: "Работно време",
-    lines: ["Mon — Fri: 09:00 - 18:00", "Sat: By Appointment Only"],
+    lines: ["Всеки ден", "09:00 – 18:00"],
   },
 ];
 
@@ -54,13 +54,13 @@ export default function ContactsPage() {
             <div className="flex justify-center pt-[48px]">
               <Badge>Контакти</Badge>
             </div>
-            <h1 className="mt-[82px] font-golos text-[46.088px] font-black leading-[43.574px] text-ink">
+            <h1 className="mt-[82px] text-center font-golos text-[46.088px] font-black leading-[43.574px] text-ink">
               Свържете се{" "}
               <span className="bg-gradient-to-t from-pine from-[92.5%] to-leaf to-[117.5%] bg-clip-text text-transparent">
                 с нас
               </span>
             </h1>
-            <p className="mt-[23px] w-[337px] max-w-full text-[12.7px] leading-[1.3] tracking-[0.127px] text-[#545454]">
+            <p className="mx-auto mt-[23px] w-[337px] max-w-full text-center text-[12.7px] leading-[1.3] tracking-[0.127px] text-[#545454]">
               Имате въпроси за нашите услуги или искате да организирате
               специално събитие? Нашият екип е на разположение да ви съдейства.
             </p>
@@ -106,17 +106,17 @@ export default function ContactsPage() {
 
         {/* Форма за запитване */}
         <section className="mt-[95px] px-[16px]">
-          <span className="flex h-[30px] w-[96px] items-center justify-center rounded-[20px] border-[0.742px] border-[#3f3f46] text-[10px] font-medium leading-[1.3] tracking-[0.1px] text-[#545454]">
+          <span className="mx-auto flex h-[30px] w-[96px] items-center justify-center rounded-[20px] border-[0.742px] border-[#3f3f46] text-[10px] font-medium leading-[1.3] tracking-[0.1px] text-[#545454]">
             Контакти
           </span>
-          <h2 className="mt-[35px] font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px] text-ink">
+          <h2 className="mt-[35px] text-center font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px] text-ink">
             Имате въпрос относно резервация, събитие или посещение?{" "}
             <span className="bg-gradient-to-t from-pine from-[92.5%] to-leaf to-[117.5%] bg-clip-text text-transparent">
               Свържете се с нас
             </span>{" "}
             и ще ви отговорим възможно най-скоро
           </h2>
-          <p className="mt-[30px] text-[14px] leading-[1.3] tracking-[0.14px] text-[#545454]">
+          <p className="mt-[30px] text-center text-[14px] leading-[1.3] tracking-[0.14px] text-[#545454]">
             На разположение сме да отговорим на въпросите ти и да ти помогнем
             при избора на твоя нов дом.
           </p>
@@ -124,10 +124,27 @@ export default function ContactsPage() {
         </section>
 
         {/* Карта */}
-        <section className="mx-[16px] mt-[65px] flex h-[367px] items-center justify-center rounded-[10px] bg-[#d9d9d9]">
-          <p className="font-golos text-[25px] font-semibold leading-[1.15] tracking-[0.25px] text-black">
-            Map
+        <section className="mt-[65px] px-[16px]">
+          <h2 className="text-center font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px] text-ink">
+            Къде да ни намерите
+          </h2>
+          <p className="mx-auto mt-[10px] max-w-[307px] text-center text-[14px] leading-[1.26] tracking-[0.14px] text-[#545454]">
+            ул. „Димитър Димов“, 8000 Бургас
           </p>
+          <div className="relative mt-[24px] h-[367px] overflow-hidden rounded-[10px]">
+            <img
+              src="/images/map.jpg"
+              alt="Картата на Бургас с локацията на Fun Park Ezero"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/20" />
+            {/* при тесния кадър пинът е центриран спрямо позицията си, за да не излиза извън картата */}
+            <img
+              src="/icons/map-pin.svg"
+              alt=""
+              className="absolute left-[68%] top-[46%] h-[59px] w-[49px] -translate-x-1/2 -translate-y-1/2"
+            />
+          </div>
         </section>
 
         {/* CTA */}
@@ -222,18 +239,26 @@ export default function ContactsPage() {
         </section>
 
         {/* Карта */}
-        <section className="relative mx-[32px] mt-[61px] h-[475px] overflow-hidden rounded-[10px]">
-          <img
-            src="/images/map.jpg"
-            alt="Картата на Бургас с локацията на Fun Park Ezero"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-black/20" />
-          <img
-            src="/icons/map-pin.svg"
-            alt=""
-            className="absolute left-[73.27%] top-[48.8%] h-[98.85px] w-[82.82px]"
-          />
+        <section className="mx-[32px] mt-[61px]">
+          <h2 className="text-center font-golos text-[35px] font-bold leading-[1.3] tracking-[0.35px] text-ink">
+            Къде да ни намерите
+          </h2>
+          <p className="mx-auto mt-[12px] max-w-[464px] text-center text-[18px] leading-[1.3] tracking-[0.18px] text-[#545454]">
+            ул. „Димитър Димов“, 8000 Бургас
+          </p>
+          <div className="relative mt-[32px] h-[475px] overflow-hidden rounded-[10px]">
+            <img
+              src="/images/map.jpg"
+              alt="Картата на Бургас с локацията на Fun Park Ezero"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/20" />
+            <img
+              src="/icons/map-pin.svg"
+              alt=""
+              className="absolute left-[73.27%] top-[48.8%] h-[98.85px] w-[82.82px]"
+            />
+          </div>
         </section>
 
         {/* CTA */}
