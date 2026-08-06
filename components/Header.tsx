@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useBookingModal } from "./BookingModal";
-import AdminLoginModal from "./AdminLoginModal";
 import { Logo } from "./Logo";
 
 export { Logo };
@@ -96,7 +95,6 @@ function SearchResults({
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [adminOpen, setAdminOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const pathname = usePathname();
@@ -208,16 +206,13 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-          <button
-            type="button"
-            className="cursor-pointer text-[20px] font-semibold leading-[26px] text-[#444444] transition-colors hover:text-leaf"
-            onClick={() => {
-              setMenuOpen(false);
-              setAdminOpen(true);
-            }}
+          <Link
+            href="/Funparkadminpanel"
+            onClick={() => setMenuOpen(false)}
+            className="text-[20px] font-semibold leading-[26px] text-[#444444] transition-colors hover:text-leaf"
           >
             Админ
-          </button>
+          </Link>
         </nav>
 
         <div className="mt-auto flex items-center justify-center gap-[32px] pb-[56px]">
@@ -252,13 +247,12 @@ export default function Header() {
               {link.label}
             </Link>
           ))}
-          <button
-            type="button"
-            className="cursor-pointer text-[16px] font-semibold leading-[20px] text-[#444444] transition-colors hover:text-leaf"
-            onClick={() => setAdminOpen(true)}
+          <Link
+            href="/Funparkadminpanel"
+            className="text-[16px] font-semibold leading-[20px] text-[#444444] transition-colors hover:text-leaf"
           >
             Админ
-          </button>
+          </Link>
         </nav>
 
         <div className="ml-auto flex items-center">
@@ -314,8 +308,6 @@ export default function Header() {
           </div>
         </div>
       </div>
-
-      {adminOpen && <AdminLoginModal onClose={() => setAdminOpen(false)} />}
     </header>
   );
 }

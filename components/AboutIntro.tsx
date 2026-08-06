@@ -4,7 +4,7 @@ export default function AboutIntro() {
   return (
     <>
       {/* Мобилен вариант */}
-      <div className="px-[16px] pt-[154px] lg:hidden">
+      <div className="px-[16px] pt-[154px] text-center lg:hidden">
         <div className="flex justify-center">
           <span className="flex h-[30px] w-[96px] items-center justify-center rounded-[20px] border-[0.742px] border-[#3f3f46] text-[10px] font-medium leading-[1.3] tracking-[0.1px] text-[#545454]">
             За атракцията

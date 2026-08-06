@@ -82,20 +82,23 @@ export default function WhyUs() {
           >
             Защо да избереш Fun Park Ezero?
           </h3>
-          <div className="absolute left-[17px] top-[450px] flex gap-[5px]">
-            {tags.map((tag) => (
-              <span
-                key={tag.label}
-                className={`flex h-[30px] items-center justify-center rounded-[20px] border-[0.698px] border-offwhite text-center text-[10px] leading-[1.3] tracking-[0.1px] text-white ${tag.mobileWidth}`}
-              >
-                {tag.label}
-              </span>
-            ))}
+          {/* Значки и текстът върху снимката — както в десктоп версията */}
+          <div className="absolute inset-x-[17px] bottom-[20px]">
+            <div className="flex gap-[5px]">
+              {tags.map((tag) => (
+                <span
+                  key={tag.label}
+                  className={`flex h-[30px] items-center justify-center rounded-[20px] border-[0.698px] border-offwhite text-center text-[10px] leading-[1.3] tracking-[0.1px] text-white ${tag.mobileWidth}`}
+                >
+                  {tag.label}
+                </span>
+              ))}
+            </div>
+            <p className="mt-[12px] text-[12px] leading-[1.3] tracking-[0.12px] text-white">
+              {whyText}
+            </p>
           </div>
         </div>
-        <p className="mx-[16px] mt-[22px] max-w-[368px] text-[12px] leading-[1.3] tracking-[0.12px] text-[#545454]">
-          {whyText}
-        </p>
 
         <div className="mx-auto mt-[67px] grid max-w-[370px] grid-cols-2 gap-x-[16px] gap-y-[11px] px-[16px]">
           {featureCards.map((card) => (

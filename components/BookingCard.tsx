@@ -118,11 +118,11 @@ export default function BookingCard() {
     <>
       {/* Мобилна карта */}
       <div className="mx-auto w-[370px] max-w-[calc(100%-32px)] rounded-[10px] bg-offwhite px-[20px] pb-[40px] pt-[44px] drop-shadow-[0px_11.389px_17.084px_rgba(0,0,0,0.08)] lg:hidden">
-        <h2 className="font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px]">
+        <h2 className="text-center font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px]">
           <span className="text-ink">Резервирай своето</span>{" "}
           <span className="text-leaf">приключение</span>
         </h2>
-        <p className="mt-[16px] text-[14px] leading-[1.3] tracking-[0.14px] text-[#545454]">
+        <p className="mt-[16px] text-center text-[14px] leading-[1.3] tracking-[0.14px] text-[#545454]">
           Провери наличните дати и избери кога искаш да посетиш парка. Само с
           няколко последователни стъпки ще резервираш своето място и ще бъдеш
           готов за едно незабравимо преживяване сред природата.
