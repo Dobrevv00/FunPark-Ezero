@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   SLOT_CAPACITY,
@@ -1276,8 +1277,17 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
     <div className="flex min-h-screen items-center justify-center bg-[#f5f5f7] px-[16px]">
       <form
         onSubmit={submit}
-        className="flex w-[400px] max-w-full flex-col items-center rounded-[10px] bg-offwhite px-[32px] py-[40px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]"
+        className="relative flex w-[400px] max-w-full flex-col items-center rounded-[10px] bg-offwhite px-[32px] py-[40px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]"
       >
+        {/* Изход от панела — обратно към сайта */}
+        <Link
+          href="/"
+          aria-label="Затвори и се върни в сайта"
+          title="Затвори и се върни в сайта"
+          className="absolute right-[16px] top-[14px] flex size-[30px] items-center justify-center rounded-full font-golos text-[18px] leading-none text-[#a1a1aa] transition-colors hover:bg-black/5 hover:text-ink"
+        >
+          ✕
+        </Link>
         <Logo className="h-[49px] w-[71px]" />
         <h1 className="mt-[20px] font-golos text-[25px] font-bold text-ink">
           Админ панел
@@ -1325,6 +1335,13 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
         >
           Вход
         </button>
+
+        <Link
+          href="/"
+          className="mt-[16px] text-[13px] font-semibold text-[#545454] underline transition-colors hover:text-forest"
+        >
+          ← Към сайта
+        </Link>
       </form>
     </div>
   );
