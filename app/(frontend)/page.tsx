@@ -7,25 +7,45 @@ import RestaurantSection from "@/components/RestaurantSection";
 import SocialFeed from "@/components/SocialFeed";
 import CtaSection from "@/components/CtaSection";
 import Footer from "@/components/Footer";
+import {
+  getFooter,
+  getHeader,
+  getHomePage,
+  getSiteSettings,
+} from "@/lib/cms.server";
 
-export default function Home() {
+// съдържанието се препрочита периодично, за да излизат промените от CMS
+export const revalidate = 60;
+
+export default async function Home() {
+  const [home, header, footer, settings] = await Promise.all([
+    getHomePage(),
+    getHeader(),
+    getFooter(),
+    getSiteSettings(),
+  ]);
+
   return (
     <>
-      <Header />
+      <Header
+        nav={header?.navItems}
+        searchPlaceholder={header?.searchPlaceholder}
+        socialLinks={settings?.socials}
+      />
       <main className="overflow-x-clip">
-        <Hero />
+        <Hero content={home?.hero} />
         <section className="bg-cream pb-[157px] lg:pb-[151px]">
           <div className="relative -mt-[27px] lg:-mt-[35px]">
-            <BookingCard />
+            <BookingCard content={home?.bookingCard} />
           </div>
-          <AboutIntro />
+          <AboutIntro content={home?.aboutIntro} />
         </section>
-        <WhyUs />
-        <RestaurantSection />
-        <SocialFeed />
-        <CtaSection />
+        <WhyUs content={home?.whyUs} />
+        <RestaurantSection content={home?.restaurant} />
+        <SocialFeed content={home?.socialFeed} socialLinks={settings?.socials} />
+        <CtaSection content={home?.cta} />
       </main>
-      <Footer />
+      <Footer content={footer} socialLinks={settings?.socials} />
     </>
   );
 }

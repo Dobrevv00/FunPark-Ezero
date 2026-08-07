@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { isValidBgPhone, isValidEmail } from "@/lib/validation";
+import { t } from "@/lib/cms";
+import type { ContactsPage } from "@/payload-types";
 
-const fields = [
+const fields = [ // само за типа FieldKey — рендирането ползва CMS етикетите
   { key: "name", label: "Име", placeholder: "Вашето име", type: "text" },
   { key: "phone", label: "Телефон", placeholder: "+359 875 2365", type: "tel" },
   { key: "email", label: "Имейл", placeholder: "your@email.com", type: "email" },
@@ -16,7 +18,42 @@ const labelGradient = {
     "linear-gradient(179.62deg, rgb(129, 96, 63) 29.235%, rgb(27, 20, 13) 73.226%)",
 };
 
-export default function ContactForm({ mobile }: { mobile: boolean }) {
+export default function ContactForm({
+  mobile,
+  content,
+}: {
+  mobile: boolean;
+  content?: ContactsPage["form"];
+}) {
+  // етикетите и подсказките идват от CMS; съобщенията за грешка остават в кода,
+  // защото са част от валидацията на формата
+  const labels = [
+    {
+      key: "name" as const,
+      label: t(content?.nameLabel, "Име"),
+      placeholder: t(content?.namePlaceholder, "Вашето име"),
+      type: "text",
+    },
+    {
+      key: "phone" as const,
+      label: t(content?.phoneLabel, "Телефон"),
+      placeholder: t(content?.phonePlaceholder, "+359 875 2365"),
+      type: "tel",
+    },
+    {
+      key: "email" as const,
+      label: t(content?.emailLabel, "Имейл"),
+      placeholder: t(content?.emailPlaceholder, "your@email.com"),
+      type: "email",
+    },
+  ];
+  const messageLabel = t(content?.messageLabel, "Съобщение");
+  const messagePlaceholder = t(content?.messagePlaceholder, "Въпроси и коментари...");
+  const submitLabel = t(content?.submitLabel, "Изпрати запитване");
+  const successMessage = t(
+    content?.successMessage,
+    "Благодарим! Ще се свържем с вас възможно най-скоро.",
+  );
   const [values, setValues] = useState({
     name: "",
     phone: "",
@@ -63,7 +100,7 @@ export default function ContactForm({ mobile }: { mobile: boolean }) {
           : "mt-[40px] flex flex-col gap-[23px] lg:absolute lg:left-[736px] lg:top-[82px] lg:mt-0 lg:w-[589px]"
       }
     >
-      {fields.map((f) => {
+      {labels.map((f) => {
         const err = showError(f.key);
         return (
           <div key={f.key} className="flex flex-col">
@@ -94,10 +131,10 @@ export default function ContactForm({ mobile }: { mobile: boolean }) {
           className="mb-[8px] bg-clip-text text-[16.386px] leading-[1.3] tracking-[0.164px] text-transparent"
           style={labelGradient}
         >
-          Съобщение
+          {messageLabel}
         </label>
         <textarea
-          placeholder="Въпроси и коментари..."
+          placeholder={messagePlaceholder}
           value={values.message}
           onChange={(e) =>
             setValues((v) => ({ ...v, message: e.target.value }))
@@ -108,7 +145,7 @@ export default function ContactForm({ mobile }: { mobile: boolean }) {
 
       {sent && (
         <p className="rounded-[9px] bg-[rgba(106,142,78,0.15)] px-[14px] py-[10px] text-[14px] font-medium text-forest">
-          Благодарим! Ще се свържем с вас възможно най-скоро.
+          {successMessage}
         </p>
       )}
 
@@ -120,7 +157,7 @@ export default function ContactForm({ mobile }: { mobile: boolean }) {
             : "mt-[8px] w-[300px] max-w-full self-center"
         }`}
       >
-        Изпрати запитване
+        {submitLabel}
       </button>
     </form>
   );

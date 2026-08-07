@@ -1,4 +1,43 @@
 import Link from "next/link";
+import { t } from "@/lib/cms";
+import type { Footer as FooterGlobalType } from "@/payload-types";
+
+/** CMS колони + позициите/стила от кода (десктоп колоните имат фиксиран left). */
+type CodeColumn = { title: string; left?: number; items: { label: string; href: string }[] };
+type CmsColumn = { title?: string | null; links?: { label?: string | null; href?: string | null }[] | null };
+
+const mergeColumns = (
+  cms: CmsColumn[] | null | undefined,
+  code: CodeColumn[],
+): CodeColumn[] => {
+  if (!cms || cms.length === 0) return code;
+  return code.map((col, i) => {
+    const c = cms[i];
+    if (!c) return col;
+    const links = c.links && c.links.length > 0 ? c.links : null;
+    return {
+      ...col,
+      title: t(c.title, col.title),
+      items: links
+        ? links.map((l, j) => ({
+            label: t(l.label, col.items[j]?.label ?? ""),
+            href: t(l.href, col.items[j]?.href ?? "#"),
+          }))
+        : col.items,
+    };
+  });
+};
+
+/** Иконите остават в кода и се съчетават с текста по ред. */
+type CodeContact = { icon: string; w: number; h: number; text: string };
+
+const mergeContacts = (
+  cms: { text?: string | null }[] | null | undefined,
+  code: CodeContact[],
+): CodeContact[] => {
+  if (!cms || cms.length === 0) return code;
+  return code.map((c, i) => ({ ...c, text: t(cms[i]?.text, c.text) }));
+};
 
 const menuItems = [
   { label: "Начало", href: "/" },
@@ -44,10 +83,10 @@ const socials = [
   },
 ];
 
-function Socials({ className = "" }: { className?: string }) {
+function Socials({ className = "", items = socials }: { className?: string; items?: typeof socials }) {
   return (
     <div className={`flex items-center gap-[24px] ${className}`}>
-      {socials.map((s) => (
+      {items.map((s) => (
         <a
           key={s.alt}
           href={s.href}
@@ -120,17 +159,37 @@ function FooterLogo({
   );
 }
 
-export default function Footer() {
+type FooterProps = {
+  content?: FooterGlobalType | null;
+  socialLinks?: { network?: string | null; url?: string | null }[] | null;
+};
+
+export default function Footer({ content, socialLinks }: FooterProps = {}) {
+  const tagline = t(
+    content?.tagline,
+    "Незабравими преживявания сред природата за цялото семейство.",
+  );
+  // десктоп и мобилно днес показват различни колони и адреси — пазят се отделно
+  const deskColumns = mergeColumns(content?.desktop?.columns, columns);
+  const mobColumns = mergeColumns(content?.mobile?.columns, mobileColumns);
+  const deskContacts = mergeContacts(content?.desktop?.contactLines, contacts);
+  const mobContacts = mergeContacts(content?.mobile?.contactLines, mobileContacts);
+  const links = socials.map((s) => ({
+    ...s,
+    href:
+      socialLinks?.find((l) => l.network === s.alt.toLowerCase())?.url ?? s.href,
+  }));
+
   return (
     <footer className="bg-forest">
       {/* Мобилен вариант */}
       <div className="flex min-h-[550px] flex-col items-center pb-[30px] pt-[30px] lg:hidden">
         <FooterLogo ring={70} inner={64} logoW={49.6} logoH={33.7} />
         <p className="mt-[12px] w-[219px] text-center font-golos text-[12.7px] leading-[13px] text-white/45">
-          Незабравими преживявания сред природата за цялото семейство.
+          {tagline}
         </p>
 
-        {mobileColumns.map((col) => (
+        {mobColumns.map((col) => (
           <div key={col.title} className="mt-[26px] flex flex-col items-center">
             <p className="text-[15px] font-medium leading-[19.5px] text-sun">
               {col.title}
@@ -155,7 +214,7 @@ export default function Footer() {
             Контакти
           </p>
           <ul className="mt-[8px] flex flex-col gap-[10px]">
-            {mobileContacts.map((c) => (
+            {mobContacts.map((c) => (
               <li key={c.text} className="flex items-center justify-center gap-[9px]">
                 <span className="flex w-[15px] shrink-0 justify-center">
                   <img src={c.icon} alt="" width={c.w} height={c.h} />
@@ -169,7 +228,7 @@ export default function Footer() {
         </div>
 
         {/* Социални мрежи */}
-        <Socials className="mt-[26px] justify-center" />
+        <Socials className="mt-[26px] justify-center" items={links} />
       </div>
 
       {/* Десктоп вариант */}
@@ -178,14 +237,14 @@ export default function Footer() {
           <FooterLogo ring={114} inner={104} logoW={81} logoH={55} />
         </div>
         <p className="absolute left-[103px] top-[188px] w-[219px] text-center font-golos text-[13px] leading-[21.125px] text-white/55">
-          Незабравими преживявания сред природата за цялото семейство.
+          {tagline}
         </p>
 
         {/* Социални мрежи — под текста, центрирани спрямо логото */}
-        <Socials className="absolute left-[103px] top-[258px] w-[219px] justify-center" />
+        <Socials className="absolute left-[103px] top-[258px] w-[219px] justify-center" items={links} />
 
         {/* Колони с линкове */}
-        {columns.map((col) => (
+        {deskColumns.map((col) => (
           <div key={col.title} className="absolute top-[119px]" style={{ left: col.left }}>
             <p className="text-[15px] font-medium leading-[19.5px] text-sun">
               {col.title}
@@ -211,7 +270,7 @@ export default function Footer() {
             Контакти
           </p>
           <ul className="mt-[12px] flex flex-col gap-[12px]">
-            {contacts.map((c) => (
+            {deskContacts.map((c) => (
               <li key={c.text} className="flex items-center gap-[9px]">
                 <span className="flex w-[15px] shrink-0 justify-center">
                   <img src={c.icon} alt="" width={c.w} height={c.h} />

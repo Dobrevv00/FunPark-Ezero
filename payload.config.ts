@@ -6,8 +6,16 @@ import { lexicalEditor } from "@payloadcms/richtext-lexical";
 import { buildConfig } from "payload";
 import sharp from "sharp";
 
+import { Attractions } from "./collections/Attractions";
+import { Events } from "./collections/Events";
 import { Media } from "./collections/Media";
 import { Users } from "./collections/Users";
+import { ContactsPage } from "./globals/ContactsPage";
+import { EventsPage } from "./globals/EventsPage";
+import { FooterGlobal } from "./globals/FooterGlobal";
+import { HeaderGlobal } from "./globals/HeaderGlobal";
+import { HomePage } from "./globals/HomePage";
+import { SiteSettings } from "./globals/SiteSettings";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -36,7 +44,15 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media],
+  collections: [Users, Media, Events, Attractions],
+  globals: [
+    SiteSettings,
+    HeaderGlobal,
+    FooterGlobal,
+    HomePage,
+    EventsPage,
+    ContactsPage,
+  ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "",
   typescript: {

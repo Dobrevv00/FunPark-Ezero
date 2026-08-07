@@ -4,6 +4,15 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Badge from "@/components/Badge";
 import YellowButton from "@/components/YellowButton";
+import { mediaUrl, t } from "@/lib/cms";
+import {
+  getEvents,
+  getEventsPage,
+  getFooter,
+  getHeader,
+  getSiteSettings,
+} from "@/lib/cms.server";
+import type { Event } from "@/payload-types";
 
 export const metadata: Metadata = {
   title: "Събития | Fun Park Ezero",
@@ -85,6 +94,13 @@ const mobileEvents = [
   },
 ];
 
+/** Цветът на баджа по категория остава в кода, за да е дизайнът непроменен. */
+const categoryColors: Record<string, string> = {
+  "За всички": "#deedfa",
+  Спорт: "#e9f3da",
+  "За деца": "#fcf1ce",
+};
+
 const mobileFooterNav = [
   { label: "Начало", href: "/" },
   { label: "Събития", href: "/events" },
@@ -157,7 +173,12 @@ function Polaroid({ p }: { p: (typeof polaroids)[number] }) {
   );
 }
 
-function EventCard({ ev }: { ev: (typeof events)[number] }) {
+type DesktopEvent = (typeof events)[number] & {
+  bookLabel: string;
+  learnMoreLabel: string;
+};
+
+function EventCard({ ev }: { ev: DesktopEvent }) {
   return (
     <div className="relative h-[578px] w-full overflow-hidden rounded-[27.292px] bg-offwhite shadow-[0px_11.28px_34.17px_0px_rgba(0,0,0,0.08)]">
       <h3 className="absolute left-[25px] top-[62px] font-golos text-[25px] font-semibold leading-[1.25] text-ink">
@@ -167,13 +188,13 @@ function EventCard({ ev }: { ev: (typeof events)[number] }) {
         {ev.desc}
       </p>
       <YellowButton booking className="absolute left-[25px] top-[167px] w-[208px]">
-        Резервирай
+        {ev.bookLabel}
       </YellowButton>
       <a
         href="#"
         className="absolute left-[241px] top-[168px] flex w-[208px] items-center justify-center rounded-[10px] px-[24px] py-[10px] font-golos text-[15px] text-black transition-colors hover:bg-black/5"
       >
-        Научи повече →
+        {ev.learnMoreLabel}
       </a>
       <div className="absolute bottom-[25px] left-[20px] right-[21px] top-[250px] overflow-hidden rounded-[10px]">
         <img src={ev.img} alt={ev.title} className="h-full w-full object-cover" />
@@ -202,7 +223,12 @@ function EventCard({ ev }: { ev: (typeof events)[number] }) {
   );
 }
 
-function MobileEventCard({ ev }: { ev: (typeof mobileEvents)[number] }) {
+type MobileEvent = (typeof mobileEvents)[number] & {
+  bookLabel: string;
+  learnMoreLabel: string;
+};
+
+function MobileEventCard({ ev }: { ev: MobileEvent }) {
   return (
     <div className="w-full overflow-hidden rounded-[20px] border border-[#e8e6e0] bg-offwhite">
       <div className="relative h-[180px] w-full">
@@ -233,13 +259,13 @@ function MobileEventCard({ ev }: { ev: (typeof mobileEvents)[number] }) {
             href="#"
             className="flex flex-1 items-center justify-center rounded-full bg-pine py-[12px] font-golos text-[14px] font-semibold leading-none text-offwhite transition-colors hover:bg-forest"
           >
-            Резервирай
+            {ev.bookLabel}
           </a>
           <a
             href="#"
             className="font-golos text-[14px] font-semibold text-pine transition-colors hover:text-forest"
           >
-            Повече →
+            {ev.learnMoreLabel}
           </a>
         </div>
       </div>
@@ -247,10 +273,174 @@ function MobileEventCard({ ev }: { ev: (typeof mobileEvents)[number] }) {
   );
 }
 
-export default function EventsPage() {
+export const revalidate = 60;
+
+/** Превръща запис от CMS в структурата, която десктоп картата вече ползва. */
+const toDesktop = (e: Event, i: number) => ({
+  title: e.title,
+  desc: t(e.desktop?.description, events[i]?.desc ?? ""),
+  img: mediaUrl(e.image, events[i]?.img ?? "/images/event-park.jpg"),
+  day: t(e.day, events[i]?.day ?? ""),
+  month: t(e.month, events[i]?.month ?? ""),
+  time: t(e.desktop?.time, events[i]?.time ?? ""),
+  bookLabel: t(e.desktop?.bookLabel, "Резервирай"),
+  learnMoreLabel: t(e.desktop?.learnMoreLabel, "Научи повече →"),
+});
+
+/** Превръща запис от CMS в структурата, която мобилната карта вече ползва. */
+const toMobile = (e: Event, i: number) => ({
+  title: e.title,
+  cat: t(e.category, mobileEvents[i]?.cat ?? ""),
+  catBg:
+    categoryColors[e.category ?? ""] ?? mobileEvents[i]?.catBg ?? "#deedfa",
+  meta: t(e.mobile?.meta, mobileEvents[i]?.meta ?? ""),
+  desc: t(e.mobile?.description, mobileEvents[i]?.desc ?? ""),
+  img: mediaUrl(e.image, mobileEvents[i]?.img ?? "/images/event-park.jpg"),
+  day: t(e.day, mobileEvents[i]?.day ?? ""),
+  month: t(e.month, mobileEvents[i]?.month ?? ""),
+  bookLabel: t(e.mobile?.bookLabel, "Резервирай"),
+  learnMoreLabel: t(e.mobile?.learnMoreLabel, "Повече →"),
+});
+
+export default async function EventsPage() {
+  const [page, header, footer, settings, cmsDesktop, cmsMobile] =
+    await Promise.all([
+      getEventsPage(),
+      getHeader(),
+      getFooter(),
+      getSiteSettings(),
+      getEvents("desktop"),
+      getEvents("mobile"),
+    ]);
+
+  // ако CMS още няма записи, се ползват списъците от кода
+  const desktopEvents =
+    cmsDesktop.length > 0
+      ? cmsDesktop.map(toDesktop)
+      : events.map((e) => ({
+          ...e,
+          bookLabel: "Резервирай",
+          learnMoreLabel: "Научи повече →",
+        }));
+  const mobileEventList =
+    cmsMobile.length > 0
+      ? cmsMobile.map(toMobile)
+      : mobileEvents.map((e) => ({
+          ...e,
+          bookLabel: "Резервирай",
+          learnMoreLabel: "Повече →",
+        }));
+
+  const d = page?.desktop;
+  const m = page?.mobile;
+
+  const desk = {
+    badge: t(d?.badge, "Календар"),
+    title: t(d?.title, "Предстоящи"),
+    titleAccent: t(d?.titleAccent, "събития"),
+    text: t(
+      d?.text,
+      "Открийте магията на природата и забавленията в Fun Park Ezero. От детски партита до корпоративни тиймбилдинги — тук всеки момент е специален.",
+    ),
+    sortLabel: t(d?.sortLabel, "Сортирай по дата"),
+    filters: filters.map((f, i) => ({ ...f, label: t(d?.filters?.[i]?.label, f.label) })),
+    polaroids: polaroids.map((pl, i) => ({
+      ...pl,
+      title: t(d?.polaroids?.[i]?.title, pl.title),
+      date: t(d?.polaroids?.[i]?.date, pl.date),
+      time: t(d?.polaroids?.[i]?.time, pl.time),
+    })),
+    empty: {
+      title: t(d?.emptyState?.title, "Няма намерени събития за избрания период"),
+      line1: t(
+        d?.emptyState?.textLine1,
+        "Опитайте да промените филтрите или се върнете по-късно, за да",
+      ),
+      line2: t(d?.emptyState?.textLine2, "видите новите ни предложения."),
+      ctaLabel: t(d?.emptyState?.ctaLabel, "Резервирай сега"),
+    },
+    news: {
+      title: t(d?.newsletter?.title, "Бъдете първите, които научават"),
+      line1: t(
+        d?.newsletter?.textLine1,
+        "Абонирайте се за нашия бюлетин и получавайте информация за",
+      ),
+      line2: t(
+        d?.newsletter?.textLine2,
+        "най-вълнуващите събития директно на вашата поща.",
+      ),
+      placeholder: t(d?.newsletter?.placeholder, "Вашият имейл"),
+      ctaLabel: t(d?.newsletter?.ctaLabel, "Абонирай се"),
+    },
+  };
+
+  const mob = {
+    badge: t(m?.badge, "КАЛЕНДАР"),
+    title: t(m?.title, "Предстоящи събития"),
+    text: t(
+      m?.text,
+      "От детски партита до корпоративни тиймбилдинги — тук всеки момент е специален.",
+    ),
+    statusLabel: t(m?.statusLabel, "Състояние: няма намерени събития"),
+    filters: mobileFilters.map((f, i) => ({
+      ...f,
+      label: t(m?.filters?.[i]?.label, f.label),
+    })),
+    empty: {
+      title: t(m?.emptyState?.title, "Няма намерени събития"),
+      text: t(
+        m?.emptyState?.text,
+        "Опитайте да промените филтрите или се върнете по-късно.",
+      ),
+      ctaLabel: t(m?.emptyState?.ctaLabel, "Изчисти филтрите"),
+    },
+    news: {
+      title: t(m?.newsletter?.title, "Бъдете първите, които научават"),
+      text: t(
+        m?.newsletter?.text,
+        "Абонирайте се за нашия бюлетин за най-вълнуващите събития.",
+      ),
+      placeholder: t(m?.newsletter?.placeholder, "Вашият имейл"),
+      ctaLabel: t(m?.newsletter?.ctaLabel, "Абонирай ме"),
+    },
+    footer: {
+      tagline: t(
+        m?.footer?.tagline,
+        "Място за вашето забавление и отдих сред природата — Парк „Езеро“, Бургас.",
+      ),
+      nav:
+        m?.footer?.navItems && m.footer.navItems.length > 0
+          ? m.footer.navItems.map((n, i) => ({
+              label: t(n.label, mobileFooterNav[i]?.label ?? ""),
+              href: t(n.href, mobileFooterNav[i]?.href ?? "/"),
+            }))
+          : mobileFooterNav,
+      socials:
+        m?.footer?.socialLabels && m.footer.socialLabels.length > 0
+          ? m.footer.socialLabels.map((sl, i) => t(sl.label, mobileSocials[i] ?? ""))
+          : mobileSocials,
+      contactLines:
+        m?.footer?.contactLines && m.footer.contactLines.length > 0
+          ? m.footer.contactLines.map((c) => t(c.text, ""))
+          : [
+              "+359 888 123 456",
+              "info@funparkezero.bg",
+              "ул. „Езерова“ 12, Бургас",
+            ],
+      copyright: t(
+        m?.footer?.copyright,
+        "© 2026 Fun Park Ezero. Всички права запазени.",
+      ),
+    },
+  };
+
   return (
     <>
-      <Header />
+      <Header
+        nav={header?.navItems}
+        searchPlaceholder={header?.searchPlaceholder}
+        socialLinks={settings?.socials}
+      />
 
       <main className="overflow-x-clip">
         {/* ===== Мобилна версия ===== */}
@@ -258,21 +448,20 @@ export default function EventsPage() {
           {/* Херо */}
           <section className="flex flex-col items-center gap-[16px] bg-cream px-[20px] py-[48px] text-center">
             <span className="rounded-full border-[1.5px] border-[#7fac2a] px-[16px] py-[7px] font-golos text-[11px] font-semibold leading-none tracking-[1.5px] text-pine">
-              КАЛЕНДАР
+              {mob.badge}
             </span>
             <h1 className="font-golos text-[34px] font-extrabold leading-[1.12] text-ink">
-              Предстоящи събития
+              {mob.title}
             </h1>
             <p className="font-golos text-[15px] leading-[1.55] text-[#3f3f46]">
-              От детски партита до корпоративни тиймбилдинги — тук всеки момент
-              е специален.
+              {mob.text}
             </p>
           </section>
 
           {/* Филтри */}
           {/* центрирани филтри — при тесен екран се пренасят на нов ред вместо да се скролват */}
           <div className="flex flex-wrap justify-center gap-[8px] px-[20px] pb-[8px] pt-[24px]">
-            {mobileFilters.map((f) => (
+            {mob.filters.map((f) => (
               <button
                 key={f.label}
                 type="button"
@@ -289,7 +478,7 @@ export default function EventsPage() {
 
           {/* Събития */}
           <div className="flex flex-col gap-[20px] px-[20px] pb-[48px] pt-[16px]">
-            {mobileEvents.map((ev) => (
+            {mobileEventList.map((ev) => (
               <MobileEventCard key={ev.title} ev={ev} />
             ))}
           </div>
@@ -297,23 +486,23 @@ export default function EventsPage() {
           {/* Празно състояние */}
           <div className="flex flex-col gap-[12px] px-[20px] pb-[48px]">
             <p className="font-golos text-[12px] font-medium text-[#a1a1aa]">
-              Състояние: няма намерени събития
+              {mob.statusLabel}
             </p>
             <div className="flex w-full flex-col items-center gap-[16px] rounded-[20px] border-[1.5px] border-dashed border-[#dbd7cb] bg-cream px-[24px] py-[40px]">
               <span className="flex size-[64px] items-center justify-center rounded-full bg-[#fcf1ce] font-golos text-[26px]">
                 📅
               </span>
               <p className="text-center font-golos text-[18px] font-bold text-ink">
-                Няма намерени събития
+                {mob.empty.title}
               </p>
               <p className="text-center font-golos text-[13.5px] leading-[1.5] text-[#3f3f46]">
-                Опитайте да промените филтрите или се върнете по-късно.
+                {mob.empty.text}
               </p>
               <button
                 type="button"
                 className="cursor-pointer rounded-full border-[1.5px] border-pine px-[24px] py-[11px] font-golos text-[14px] font-semibold leading-none text-pine transition-colors hover:bg-pine hover:text-offwhite"
               >
-                Изчисти филтрите
+                {mob.empty.ctaLabel}
               </button>
             </div>
           </div>
@@ -322,22 +511,22 @@ export default function EventsPage() {
           <section className="px-[20px] pb-[64px]">
             <div className="flex flex-col gap-[16px] rounded-[24px] bg-pine px-[24px] py-[32px]">
               <h2 className="font-golos text-[22px] font-extrabold leading-[1.2] text-offwhite">
-                Бъдете първите, които научават
+                {mob.news.title}
               </h2>
               <p className="font-golos text-[14px] leading-[1.5] text-[rgba(255,254,254,0.8)]">
-                Абонирайте се за нашия бюлетин за най-вълнуващите събития.
+                {mob.news.text}
               </p>
               <form className="flex flex-col gap-[16px]">
                 <input
                   type="email"
-                  placeholder="Вашият имейл"
+                  placeholder={mob.news.placeholder}
                   className="w-full rounded-full bg-offwhite px-[20px] py-[15px] font-golos text-[14px] text-ink outline-none placeholder:text-[#a1a1aa]"
                 />
                 <button
                   type="submit"
                   className="w-full cursor-pointer rounded-full bg-sun py-[15px] font-golos text-[14px] font-semibold leading-none text-pine transition-colors hover:bg-[#e0b32f]"
                 >
-                  Абонирай ме
+                  {mob.news.ctaLabel}
                 </button>
               </form>
             </div>
@@ -358,11 +547,10 @@ export default function EventsPage() {
               </span>
             </div>
             <p className="font-golos text-[14px] leading-[1.6] text-[rgba(255,254,254,0.7)]">
-              Място за вашето забавление и отдих сред природата — Парк
-              „Езеро&ldquo;, Бургас.
+              {mob.footer.tagline}
             </p>
             <nav className="flex gap-[24px]">
-              {mobileFooterNav.map((l) => (
+              {mob.footer.nav.map((l) => (
                 <Link
                   key={l.label}
                   href={l.href}
@@ -373,7 +561,7 @@ export default function EventsPage() {
               ))}
             </nav>
             <div className="flex gap-[10px]">
-              {mobileSocials.map((s) => (
+              {mob.footer.socials.map((s) => (
                 <a
                   key={s}
                   href="#"
@@ -384,12 +572,12 @@ export default function EventsPage() {
               ))}
             </div>
             <div className="flex flex-col gap-[8px] font-golos text-[14px] text-[rgba(255,254,254,0.85)]">
-              <p>+359 888 123 456</p>
-              <p>info@funparkezero.bg</p>
-              <p>ул. „Езерова&ldquo; 12, Бургас</p>
+              {mob.footer.contactLines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
             </div>
             <p className="font-golos text-[12px] text-[rgba(255,254,254,0.55)]">
-              © 2026 Fun Park Ezero. Всички права запазени.
+              {mob.footer.copyright}
             </p>
           </footer>
         </div>
@@ -400,22 +588,20 @@ export default function EventsPage() {
           <section className="relative mx-auto h-[550px] max-w-[1512px]">
             <div className="absolute inset-x-[32px] top-[9px] h-[541px] rounded-[10px] bg-cream" />
             <div className="relative flex flex-col items-center px-[24px] pt-[149px] text-center">
-              <Badge>Календар</Badge>
+              <Badge>{desk.badge}</Badge>
               <h1 className="mt-[35px] font-golos text-[55px] font-black leading-[52px] text-ink">
-                Предстоящи{" "}
+                {desk.title}{" "}
                 <span className="bg-gradient-to-t from-pine from-[92.5%] to-leaf to-[117.5%] bg-clip-text text-transparent">
-                  събития
+                  {desk.titleAccent}
                 </span>
               </h1>
               <p className="mt-[18px] max-w-[608px] text-[16px] leading-[1.3] tracking-[0.16px] text-[#545454]">
-                Открийте магията на природата и забавленията в Fun Park Ezero.
-                От детски партита до корпоративни тиймбилдинги — тук всеки
-                момент е специален.
+                {desk.text}
               </p>
             </div>
 
             {/* Декоративни полароиди */}
-            {polaroids.map((p) => (
+            {desk.polaroids.map((p) => (
               <Polaroid key={p.title} p={p} />
             ))}
             <img
@@ -452,7 +638,7 @@ export default function EventsPage() {
 
           {/* Филтри */}
           <div className="mx-auto mt-[46px] flex max-w-[1512px] flex-wrap items-center gap-[20px] px-[31px]">
-            {filters.map((f) => (
+            {desk.filters.map((f) => (
               <button
                 key={f.label}
                 type="button"
@@ -466,13 +652,13 @@ export default function EventsPage() {
               </button>
             ))}
             <p className="ml-auto font-golos text-[14px] font-medium text-[#3f3f46]">
-              Сортирай по дата
+              {desk.sortLabel}
             </p>
           </div>
 
           {/* Събития */}
           <div className="mx-auto mt-[80px] grid max-w-[1512px] grid-cols-2 gap-[24px] px-[32px] xl:grid-cols-3">
-            {events.map((ev) => (
+            {desktopEvents.map((ev) => (
               <EventCard key={ev.title} ev={ev} />
             ))}
           </div>
@@ -488,14 +674,14 @@ export default function EventsPage() {
                 />
               </div>
               <h2 className="mt-[35px] font-golos text-[27.15px] font-semibold leading-[36.2px] text-[#1a1c1d]">
-                Няма намерени събития за избрания период
+                {desk.empty.title}
               </h2>
               <p className="mt-[15px] text-[15.838px] leading-[19px] text-[#666666]">
-                Опитайте да промените филтрите или се върнете по-късно, за да
-                <br /> видите новите ни предложения.
+                {desk.empty.line1}
+                <br /> {desk.empty.line2}
               </p>
               <YellowButton booking className="mt-[35px] w-[259px]">
-                Резервирай сега
+                {desk.empty.ctaLabel}
               </YellowButton>
             </div>
           </div>
@@ -504,23 +690,23 @@ export default function EventsPage() {
           <section className="mx-auto mb-[79px] mt-[73px] max-w-[1512px] pl-[31px] pr-[33px]">
             <div className="relative h-[295.229px] rounded-[10px] bg-forest">
               <h2 className="absolute left-[68px] top-[100px] whitespace-nowrap font-golos text-[35px] font-semibold leading-[46.543px] text-white">
-                Бъдете първите, които научават
+                {desk.news.title}
               </h2>
               <p className="absolute left-[68px] top-[158px] text-[16px] leading-[21px] text-white">
-                Абонирайте се за нашия бюлетин и получавайте информация за
-                <br /> най-вълнуващите събития директно на вашата поща.
+                {desk.news.line1}
+                <br /> {desk.news.line2}
               </p>
               <form className="absolute left-[806px] right-[38px] top-[137px] flex">
                 <input
                   type="email"
-                  placeholder="Вашият имейл"
+                  placeholder={desk.news.placeholder}
                   className="h-[45px] w-[383px] rounded-[10px] bg-[#fbfbfb] px-[15px] text-[15px] text-ink outline-none placeholder:text-[#6b7280]"
                 />
                 <button
                   type="submit"
                   className="ml-[4px] h-[45px] w-[177px] cursor-pointer rounded-[10px] bg-sun text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f]"
                 >
-                  Абонирай се
+                  {desk.news.ctaLabel}
                 </button>
               </form>
             </div>
@@ -529,7 +715,7 @@ export default function EventsPage() {
       </main>
 
       <div className="hidden lg:block">
-        <Footer />
+        <Footer content={footer} socialLinks={settings?.socials} />
       </div>
     </>
   );

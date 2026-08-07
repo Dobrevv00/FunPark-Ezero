@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useBookingModal } from "./BookingModal";
 import { Logo } from "./Logo";
+import { t } from "@/lib/cms";
 
 export { Logo };
 
@@ -96,7 +97,32 @@ function SearchResults({
   );
 }
 
-export default function Header() {
+type HeaderProps = {
+  nav?: { label?: string | null; href?: string | null }[] | null;
+  searchPlaceholder?: string | null;
+  socialLinks?: { network?: string | null; url?: string | null }[] | null;
+};
+
+export default function Header({
+  nav,
+  searchPlaceholder,
+  socialLinks,
+}: HeaderProps = {}) {
+  // менюто и текстът в търсачката идват от CMS; търсачката остава в кода
+  const navList =
+    nav && nav.length > 0
+      ? nav.map((n, i) => ({
+          label: t(n.label, navLinks[i]?.label ?? ""),
+          href: t(n.href, navLinks[i]?.href ?? "/"),
+        }))
+      : navLinks;
+  const searchText = t(searchPlaceholder, "Потърси");
+  const socialList = socials.map((s) => ({
+    ...s,
+    href:
+      socialLinks?.find((l) => l.network === s.alt.toLowerCase())?.url ?? s.href,
+  }));
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -160,7 +186,7 @@ export default function Header() {
             <input
               type="search"
               autoFocus
-              placeholder="Потърси"
+              placeholder={searchText}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onFocus={() => setFocused(true)}
@@ -198,7 +224,7 @@ export default function Header() {
         </div>
 
         <nav className="mt-[40px] flex flex-col items-center gap-[28px]">
-          {navLinks.map((link) => (
+          {navList.map((link) => (
             <Link
               key={link.label}
               href={link.href}
@@ -213,7 +239,7 @@ export default function Header() {
         </nav>
 
         <div className="mt-auto flex items-center justify-center gap-[32px] pb-[56px]">
-          {socials.map((s) => (
+          {socialList.map((s) => (
             <a
               key={s.alt}
               href={s.href}
@@ -233,7 +259,7 @@ export default function Header() {
         <Logo className="h-[42px] w-[62px]" />
 
         <nav className="ml-[43px] flex items-center gap-[32px]">
-          {navLinks.map((link) => (
+          {navList.map((link) => (
             <Link
               key={link.label}
               href={link.href}
@@ -267,7 +293,7 @@ export default function Header() {
               <input
                 type="search"
                 role="searchbox"
-                placeholder="Потърси"
+                placeholder={searchText}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 onFocus={() => setFocused(true)}
@@ -284,7 +310,7 @@ export default function Header() {
           </div>
 
           <div className="ml-[45px] flex items-center gap-[24px]">
-            {socials.map((s) => (
+            {socialList.map((s) => (
               <a
                 key={s.alt}
                 href={s.href}

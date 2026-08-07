@@ -5,6 +5,8 @@ import YellowButton from "./YellowButton";
 import Badge from "./Badge";
 import { useBookingModal } from "./BookingModal";
 import { getBlockedDaySet } from "@/lib/bookingStore";
+import { t } from "@/lib/cms";
+import type { HomePage } from "@/payload-types";
 import {
   getMonthWeeks,
   monthNames,
@@ -113,24 +115,40 @@ function Calendar({ mobile }: { mobile: boolean }) {
   );
 }
 
-export default function BookingCard() {
+export default function BookingCard({
+  content,
+}: {
+  content?: HomePage["bookingCard"];
+}) {
+  const badge = t(content?.badge, "Резервация");
+  const title = t(content?.title, "Резервирай своето");
+  const titleAccent = t(content?.titleAccent, "приключение");
+  const text = t(
+    content?.text,
+    "Провери наличните дати и избери кога искаш да посетиш парка. Само с няколко последователни стъпки ще резервираш своето място и ще бъдеш готов за едно незабравимо преживяване сред природата.",
+  );
+  const ctaLabel = t(content?.ctaLabel, "Започни резервация");
+  // позициите на стъпките остават в кода — от CMS идва само надписът
+  const stepList = steps.map((s, i) => ({
+    ...s,
+    label: t(content?.steps?.[i]?.label, s.label),
+  }));
+
   return (
     <>
       {/* Мобилна карта */}
       <div className="mx-auto w-[370px] max-w-[calc(100%-32px)] rounded-[10px] bg-offwhite px-[20px] pb-[40px] pt-[44px] drop-shadow-[0px_11.389px_17.084px_rgba(0,0,0,0.08)] lg:hidden">
         <h2 className="text-center font-golos text-[25px] font-bold leading-[1.15] tracking-[0.25px]">
-          <span className="text-ink">Резервирай своето</span>{" "}
-          <span className="text-leaf">приключение</span>
+          <span className="text-ink">{title}</span>{" "}
+          <span className="text-leaf">{titleAccent}</span>
         </h2>
         <p className="mt-[16px] text-center text-[14px] leading-[1.3] tracking-[0.14px] text-[#545454]">
-          Провери наличните дати и избери кога искаш да посетиш парка. Само с
-          няколко последователни стъпки ще резервираш своето място и ще бъдеш
-          готов за едно незабравимо преживяване сред природата.
+          {text}
         </p>
 
         {/* Вертикални стъпки */}
         <div className="mt-[36px] flex flex-col">
-          {steps.map((s, i) => (
+          {stepList.map((s, i) => (
             <div key={s.n}>
               <div className="flex items-center gap-[12px]">
                 <span className="flex size-[48.676px] shrink-0 items-center justify-center">
@@ -178,7 +196,7 @@ export default function BookingCard() {
         </div>
 
         <YellowButton booking className="mt-[30px] h-[40px] w-full">
-          Започни резервация
+          {ctaLabel}
         </YellowButton>
       </div>
 
@@ -186,25 +204,23 @@ export default function BookingCard() {
       <div className="relative mx-auto hidden h-[590px] w-[1227px] rounded-[10px] bg-offwhite drop-shadow-[0px_11.389px_17.084px_rgba(0,0,0,0.08)] lg:block">
         {/* Лява колона */}
         <div className="absolute left-[90px] top-[118px]">
-          <Badge>Резервация</Badge>
+          <Badge>{badge}</Badge>
         </div>
         <h2 className="absolute left-[90px] top-[183px] w-[363px] font-golos text-[35px] font-bold leading-[1.15] tracking-[0.35px]">
-          <span className="text-forest">Резервирай своето</span>{" "}
-          <span className="text-leaf">приключение</span>
+          <span className="text-forest">{title}</span>{" "}
+          <span className="text-leaf">{titleAccent}</span>
         </h2>
         <p className="absolute left-[90px] top-[277px] w-[363px] text-[16px] leading-[1.3] tracking-[0.16px] text-[#545454]">
-          Провери наличните дати и избери кога искаш да посетиш парка. Само с
-          няколко последователни стъпки ще резервираш своето място и ще бъдеш
-          готов за едно незабравимо преживяване сред природата.
+          {text}
         </p>
         <YellowButton booking className="absolute left-[90px] top-[413px] w-[259px]">
-          Започни резервация
+          {ctaLabel}
         </YellowButton>
 
         {/* Стъпки */}
         <div className="absolute left-[719px] top-[67px] h-[0.5px] w-[386px] bg-[#dddad2]" />
         <div className="absolute left-[676.57px] top-[42px] size-[50.295px] rounded-full bg-[#dddad2]" />
-        {steps.map((step) => (
+        {stepList.map((step) => (
           <div key={step.n}>
             <div
               className={`absolute top-[49.74px] flex size-[34.835px] items-center justify-center rounded-full font-golos text-[14.332px] font-medium text-offwhite ${

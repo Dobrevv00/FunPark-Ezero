@@ -1,4 +1,6 @@
 import Badge from "./Badge";
+import { mediaUrl, t } from "@/lib/cms";
+import type { HomePage } from "@/payload-types";
 
 const featureCards = [
   {
@@ -55,20 +57,36 @@ const tags = [
 const whyText =
   "Fun Park Ezero съчетава въжено приключение, природа и споделени моменти на едно място. Създаден за всички, които обичат активното време на открито.";
 
-export default function WhyUs() {
+export default function WhyUs({ content }: { content?: HomePage["whyUs"] }) {
+  const badge = t(content?.badge, "Защо нас");
+  const heading = t(content?.heading, "Защо да избереш Fun Park Ezero?");
+  const text = t(content?.text, whyText);
+  // цветовете, иконите и ширините остават от кода — от CMS идва само текстът
+  const tagList = tags.map((tag, i) => ({
+    ...tag,
+    label: t(content?.tags?.[i]?.label, tag.label),
+  }));
+  const cards = featureCards.map((card, i) => ({
+    ...card,
+    title: t(content?.cards?.[i]?.title, card.title),
+    desc: t(content?.cards?.[i]?.desc, card.desc),
+  }));
+  const image = mediaUrl(content?.image, "/images/why-park.jpg");
+  const imageMobile = mediaUrl(content?.imageMobile, "/images/why-park-mobile.jpg");
+
   return (
     <>
       {/* Мобилен вариант */}
       <section className="pt-[40px] lg:hidden">
         <div className="flex justify-center">
           <span className="flex h-[30px] w-[86px] items-center justify-center rounded-[14.842px] border-[0.742px] border-[#3f3f46] text-[10px] font-medium leading-[1.3] tracking-[0.1px] text-[#545454]">
-            Защо нас
+            {badge}
           </span>
         </div>
 
         <div className="relative mx-[16px] mt-[33px] h-[495px] overflow-hidden rounded-[5px]">
           <img
-            src="/images/why-park-mobile.jpg"
+            src={imageMobile}
             alt="Въженото съоръжение на Fun Park Ezero"
             className="h-full w-full object-cover"
           />
@@ -80,12 +98,12 @@ export default function WhyUs() {
                 "linear-gradient(180.18deg, rgb(255, 255, 255) 31.896%, rgb(178, 178, 178) 270.46%)",
             }}
           >
-            Защо да избереш Fun Park Ezero?
+            {heading}
           </h3>
           {/* Значки и текстът върху снимката — както в десктоп версията */}
           <div className="absolute inset-x-[17px] bottom-[20px]">
             <div className="flex gap-[5px]">
-              {tags.map((tag) => (
+              {tagList.map((tag) => (
                 <span
                   key={tag.label}
                   className={`flex h-[30px] items-center justify-center rounded-[20px] border-[0.698px] border-offwhite text-center text-[10px] leading-[1.3] tracking-[0.1px] text-white ${tag.mobileWidth}`}
@@ -95,13 +113,13 @@ export default function WhyUs() {
               ))}
             </div>
             <p className="mt-[12px] text-[12px] leading-[1.3] tracking-[0.12px] text-white">
-              {whyText}
+              {text}
             </p>
           </div>
         </div>
 
         <div className="mx-auto mt-[67px] grid max-w-[370px] grid-cols-2 gap-x-[16px] gap-y-[11px] px-[16px]">
-          {featureCards.map((card) => (
+          {cards.map((card) => (
             <div
               key={card.title}
               className="relative h-[187px] w-full rounded-[5.145px] shadow-[0px_5.861px_17.582px_0px_rgba(0,0,0,0.08)]"
@@ -130,14 +148,14 @@ export default function WhyUs() {
       {/* Десктоп вариант */}
       <section className="mx-auto hidden max-w-[1512px] pt-[112px] lg:block">
         <div className="flex justify-center">
-          <Badge>Защо нас</Badge>
+          <Badge>{badge}</Badge>
         </div>
 
         <div className="mt-[60px] flex justify-center gap-[24px] px-[32px]">
           {/* Голяма снимка с текст */}
           <div className="relative h-[597px] w-[712px] shrink-0 overflow-hidden rounded-[10px]">
             <img
-              src="/images/why-park.jpg"
+              src={image}
               alt="Въженото съоръжение на Fun Park Ezero"
               className="h-full w-full object-cover"
             />
@@ -149,10 +167,10 @@ export default function WhyUs() {
                   "linear-gradient(180.24deg, rgb(255, 255, 255) 31.896%, rgb(178, 178, 178) 270.46%)",
               }}
             >
-              Защо да избереш Fun Park Ezero?
+              {heading}
             </h3>
             <div className="absolute left-[40px] top-[500px] flex gap-[15px]">
-              {tags.map((tag) => (
+              {tagList.map((tag) => (
                 <span
                   key={tag.label}
                   className={`flex h-[31.946px] items-center justify-center rounded-[20px] border border-offwhite text-center text-[12px] leading-[1.3] tracking-[0.12px] text-white ${tag.width}`}
@@ -162,13 +180,13 @@ export default function WhyUs() {
               ))}
             </div>
             <p className="absolute left-[40px] top-[547px] w-[585px] text-[12px] leading-[1.3] tracking-[0.12px] text-white">
-              {whyText}
+              {text}
             </p>
           </div>
 
           {/* Карти 2x2 */}
           <div className="grid shrink-0 grid-cols-2 gap-x-[24px] gap-y-[25px]">
-            {featureCards.map((card) => (
+            {cards.map((card) => (
               <div
                 key={card.title}
                 className="relative h-[285.5px] w-[344px] rounded-[10px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.08)]"

@@ -69,6 +69,8 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    events: Event;
+    attractions: Attraction;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,6 +80,8 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    events: EventsSelect<false> | EventsSelect<true>;
+    attractions: AttractionsSelect<false> | AttractionsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -87,8 +91,22 @@ export interface Config {
     defaultIDType: number;
   };
   fallbackLocale: null;
-  globals: {};
-  globalsSelect: {};
+  globals: {
+    'site-settings': SiteSetting;
+    header: Header;
+    footer: Footer;
+    'home-page': HomePage;
+    'events-page': EventsPage;
+    'contacts-page': ContactsPage;
+  };
+  globalsSelect: {
+    'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
+    header: HeaderSelect<false> | HeaderSelect<true>;
+    footer: FooterSelect<false> | FooterSelect<true>;
+    'home-page': HomePageSelect<false> | HomePageSelect<true>;
+    'events-page': EventsPageSelect<false> | EventsPageSelect<true>;
+    'contacts-page': ContactsPageSelect<false> | ContactsPageSelect<true>;
+  };
   locale: null;
   widgets: {
     collections: CollectionsWidget;
@@ -163,6 +181,71 @@ export interface Media {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events".
+ */
+export interface Event {
+  id: number;
+  title: string;
+  /**
+   * Пази текущото положение — днес двете версии на сайта показват различни събития.
+   */
+  showOn: 'both' | 'desktop' | 'mobile';
+  /**
+   * По-малкото число излиза първо.
+   */
+  order?: number | null;
+  day?: string | null;
+  /**
+   * Напр. ЮЛИ, АВГ.
+   */
+  month?: string | null;
+  /**
+   * Цветът на баджа е в кода и се подбира по категорията.
+   */
+  category?: ('За всички' | 'Спорт' | 'За деца') | null;
+  image?: (number | null) | Media;
+  desktop?: {
+    description?: string | null;
+    time?: string | null;
+    learnMoreLabel?: string | null;
+    bookLabel?: string | null;
+  };
+  mobile?: {
+    description?: string | null;
+    /**
+     * Показва се както е въведено, напр. „🕒 21:00 ч. · Терасата“.
+     */
+    meta?: string | null;
+    bookLabel?: string | null;
+    learnMoreLabel?: string | null;
+  };
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "attractions".
+ */
+export interface Attraction {
+  id: number;
+  name: string;
+  /**
+   * Използва се само вътрешно — не създава нов URL в тази фаза.
+   */
+  slug?: string | null;
+  shortDescription?: string | null;
+  gallery?:
+    | {
+        image?: (number | null) | Media;
+        alt?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -192,6 +275,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'media';
         value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'events';
+        value: number | Event;
+      } | null)
+    | ({
+        relationTo: 'attractions';
+        value: number | Attraction;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -277,6 +368,55 @@ export interface MediaSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events_select".
+ */
+export interface EventsSelect<T extends boolean = true> {
+  title?: T;
+  showOn?: T;
+  order?: T;
+  day?: T;
+  month?: T;
+  category?: T;
+  image?: T;
+  desktop?:
+    | T
+    | {
+        description?: T;
+        time?: T;
+        learnMoreLabel?: T;
+        bookLabel?: T;
+      };
+  mobile?:
+    | T
+    | {
+        description?: T;
+        meta?: T;
+        bookLabel?: T;
+        learnMoreLabel?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "attractions_select".
+ */
+export interface AttractionsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  shortDescription?: T;
+  gallery?:
+    | T
+    | {
+        image?: T;
+        alt?: T;
+        id?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv_select".
  */
 export interface PayloadKvSelect<T extends boolean = true> {
@@ -314,6 +454,792 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
   batch?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings".
+ */
+export interface SiteSetting {
+  id: number;
+  brand?: {
+    siteName?: string | null;
+    /**
+     * Показва се под логото във футъра. Дълъг текст разваля колоната.
+     */
+    tagline?: string | null;
+  };
+  contact?: {
+    phone?: string | null;
+    email?: string | null;
+    addressLine1?: string | null;
+    addressLine2?: string | null;
+  };
+  openingHours?: {
+    label?: string | null;
+    value?: string | null;
+  };
+  /**
+   * Иконите са в кода и се подбират по мрежата. Редът определя подредбата в хедъра и футъра.
+   */
+  socials?:
+    | {
+        network?: ('facebook' | 'instagram') | null;
+        url?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  legal?: {
+    copyright?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "header".
+ */
+export interface Header {
+  id: number;
+  /**
+   * Повече от 5 точки не се събират в реда на десктоп версията.
+   */
+  navItems?:
+    | {
+        label?: string | null;
+        href?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  searchPlaceholder?: string | null;
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "footer".
+ */
+export interface Footer {
+  id: number;
+  tagline?: string | null;
+  desktop?: {
+    columns?:
+      | {
+          title?: string | null;
+          links?:
+            | {
+                label?: string | null;
+                href?: string | null;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Ред 1 получава иконата за локация, ред 2 — телефон, ред 3 — имейл. Текстът не се пренася на нов ред.
+     */
+    contactLines?:
+      | {
+          text?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  mobile?: {
+    columns?:
+      | {
+          title?: string | null;
+          links?:
+            | {
+                label?: string | null;
+                href?: string | null;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+    /**
+     * Ред 1 получава иконата за локация, ред 2 — телефон, ред 3 — имейл. Текстът не се пренася на нов ред.
+     */
+    contactLines?:
+      | {
+          text?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home-page".
+ */
+export interface HomePage {
+  id: number;
+  hero?: {
+    titleLine1?: string | null;
+    titleLine2?: string | null;
+    /**
+     * Две реда на десктоп. По-дълъг текст застъпва бутона.
+     */
+    subtitle?: string | null;
+    ctaLabel?: string | null;
+    imageDesktop?: (number | null) | Media;
+    imageMobile?: (number | null) | Media;
+  };
+  bookingCard?: {
+    badge?: string | null;
+    title?: string | null;
+    titleAccent?: string | null;
+    text?: string | null;
+    ctaLabel?: string | null;
+    /**
+     * Точно 4 стъпки — позициите им на десктоп са фиксирани в дизайна.
+     */
+    steps?:
+      | {
+          label?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  aboutIntro?: {
+    /**
+     * Днес е с главна буква „А“ — умишлено се пази различен.
+     */
+    badgeDesktop?: string | null;
+    badgeMobile?: string | null;
+    title?: string | null;
+    titleAccent?: string | null;
+    text?: string | null;
+  };
+  whyUs?: {
+    badge?: string | null;
+    heading?: string | null;
+    text?: string | null;
+    /**
+     * Ширините им са фиксирани в дизайна — до ~14 знака.
+     */
+    tags?:
+      | {
+          label?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    image?: (number | null) | Media;
+    imageMobile?: (number | null) | Media;
+    /**
+     * Точно 4 карти. Цветовете и иконите остават в кода, за да не се променя дизайнът.
+     */
+    cards?:
+      | {
+          title?: string | null;
+          desc?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  restaurant?: {
+    badge?: string | null;
+    title?: string | null;
+    text?: string | null;
+    /**
+     * Точно 3 снимки — позициите им са фиксирани в дизайна.
+     */
+    images?:
+      | {
+          image?: (number | null) | Media;
+          alt?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  socialFeed?: {
+    title?: string | null;
+    text?: string | null;
+    ctaLabel?: string | null;
+    handle?: string | null;
+    videos?:
+      | {
+          image?: (number | null) | Media;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  cta?: {
+    titleLine1?: string | null;
+    titleLine2?: string | null;
+    text?: string | null;
+    ctaLabelDesktop?: string | null;
+    /**
+     * Днес е различен от десктоп — умишлено се пази.
+     */
+    ctaLabelMobile?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events-page".
+ */
+export interface EventsPage {
+  id: number;
+  desktop?: {
+    badge?: string | null;
+    title?: string | null;
+    titleAccent?: string | null;
+    text?: string | null;
+    filters?:
+      | {
+          label?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    sortLabel?: string | null;
+    /**
+     * Точно 4. Позициите, наклоните и снимките остават в кода — тук се редактира само текстът.
+     */
+    polaroids?:
+      | {
+          title?: string | null;
+          date?: string | null;
+          time?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    emptyState?: {
+      title?: string | null;
+      textLine1?: string | null;
+      textLine2?: string | null;
+      ctaLabel?: string | null;
+    };
+    newsletter?: {
+      /**
+       * Стои на един ред — по-дълъг текст излиза от блока.
+       */
+      title?: string | null;
+      textLine1?: string | null;
+      textLine2?: string | null;
+      placeholder?: string | null;
+      ctaLabel?: string | null;
+    };
+  };
+  mobile?: {
+    badge?: string | null;
+    title?: string | null;
+    text?: string | null;
+    filters?:
+      | {
+          label?: string | null;
+          id?: string | null;
+        }[]
+      | null;
+    statusLabel?: string | null;
+    emptyState?: {
+      title?: string | null;
+      text?: string | null;
+      ctaLabel?: string | null;
+    };
+    newsletter?: {
+      title?: string | null;
+      text?: string | null;
+      placeholder?: string | null;
+      ctaLabel?: string | null;
+    };
+    /**
+     * Мобилната версия на тази страница има собствен футър с различни данни от общия — пази се такъв, каквъвто е днес.
+     */
+    footer?: {
+      tagline?: string | null;
+      navItems?:
+        | {
+            label?: string | null;
+            href?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      socialLabels?:
+        | {
+            label?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      contactLines?:
+        | {
+            text?: string | null;
+            id?: string | null;
+          }[]
+        | null;
+      copyright?: string | null;
+    };
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contacts-page".
+ */
+export interface ContactsPage {
+  id: number;
+  hero?: {
+    badge?: string | null;
+    title?: string | null;
+    titleAccent?: string | null;
+    text?: string | null;
+    image?: (number | null) | Media;
+  };
+  info?: {
+    title?: string | null;
+    text?: string | null;
+    /**
+     * Точно 3 колони — иконите им остават в кода (локация, телефон, часовник).
+     */
+    columns?:
+      | {
+          label?: string | null;
+          lines?:
+            | {
+                text?: string | null;
+                id?: string | null;
+              }[]
+            | null;
+          id?: string | null;
+        }[]
+      | null;
+  };
+  form?: {
+    badge?: string | null;
+    titleBefore?: string | null;
+    titleAccent?: string | null;
+    titleAfter?: string | null;
+    text?: string | null;
+    nameLabel?: string | null;
+    namePlaceholder?: string | null;
+    phoneLabel?: string | null;
+    phonePlaceholder?: string | null;
+    emailLabel?: string | null;
+    emailPlaceholder?: string | null;
+    messageLabel?: string | null;
+    messagePlaceholder?: string | null;
+    submitLabel?: string | null;
+    /**
+     * Съобщенията за грешка при валидация остават в кода, защото са част от логиката на формата.
+     */
+    successMessage?: string | null;
+  };
+  map?: {
+    title?: string | null;
+    addressLine?: string | null;
+    image?: (number | null) | Media;
+  };
+  cta?: {
+    titleDesktop?: string | null;
+    titleMobileLine1?: string | null;
+    titleMobileLine2?: string | null;
+    text?: string | null;
+    ctaLabelDesktop?: string | null;
+    /**
+     * Днес е различен от десктоп — умишлено се пази.
+     */
+    ctaLabelMobile?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "site-settings_select".
+ */
+export interface SiteSettingsSelect<T extends boolean = true> {
+  brand?:
+    | T
+    | {
+        siteName?: T;
+        tagline?: T;
+      };
+  contact?:
+    | T
+    | {
+        phone?: T;
+        email?: T;
+        addressLine1?: T;
+        addressLine2?: T;
+      };
+  openingHours?:
+    | T
+    | {
+        label?: T;
+        value?: T;
+      };
+  socials?:
+    | T
+    | {
+        network?: T;
+        url?: T;
+        id?: T;
+      };
+  legal?:
+    | T
+    | {
+        copyright?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "header_select".
+ */
+export interface HeaderSelect<T extends boolean = true> {
+  navItems?:
+    | T
+    | {
+        label?: T;
+        href?: T;
+        id?: T;
+      };
+  searchPlaceholder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "footer_select".
+ */
+export interface FooterSelect<T extends boolean = true> {
+  tagline?: T;
+  desktop?:
+    | T
+    | {
+        columns?:
+          | T
+          | {
+              title?: T;
+              links?:
+                | T
+                | {
+                    label?: T;
+                    href?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+        contactLines?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+      };
+  mobile?:
+    | T
+    | {
+        columns?:
+          | T
+          | {
+              title?: T;
+              links?:
+                | T
+                | {
+                    label?: T;
+                    href?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+        contactLines?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "home-page_select".
+ */
+export interface HomePageSelect<T extends boolean = true> {
+  hero?:
+    | T
+    | {
+        titleLine1?: T;
+        titleLine2?: T;
+        subtitle?: T;
+        ctaLabel?: T;
+        imageDesktop?: T;
+        imageMobile?: T;
+      };
+  bookingCard?:
+    | T
+    | {
+        badge?: T;
+        title?: T;
+        titleAccent?: T;
+        text?: T;
+        ctaLabel?: T;
+        steps?:
+          | T
+          | {
+              label?: T;
+              id?: T;
+            };
+      };
+  aboutIntro?:
+    | T
+    | {
+        badgeDesktop?: T;
+        badgeMobile?: T;
+        title?: T;
+        titleAccent?: T;
+        text?: T;
+      };
+  whyUs?:
+    | T
+    | {
+        badge?: T;
+        heading?: T;
+        text?: T;
+        tags?:
+          | T
+          | {
+              label?: T;
+              id?: T;
+            };
+        image?: T;
+        imageMobile?: T;
+        cards?:
+          | T
+          | {
+              title?: T;
+              desc?: T;
+              id?: T;
+            };
+      };
+  restaurant?:
+    | T
+    | {
+        badge?: T;
+        title?: T;
+        text?: T;
+        images?:
+          | T
+          | {
+              image?: T;
+              alt?: T;
+              id?: T;
+            };
+      };
+  socialFeed?:
+    | T
+    | {
+        title?: T;
+        text?: T;
+        ctaLabel?: T;
+        handle?: T;
+        videos?:
+          | T
+          | {
+              image?: T;
+              id?: T;
+            };
+      };
+  cta?:
+    | T
+    | {
+        titleLine1?: T;
+        titleLine2?: T;
+        text?: T;
+        ctaLabelDesktop?: T;
+        ctaLabelMobile?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "events-page_select".
+ */
+export interface EventsPageSelect<T extends boolean = true> {
+  desktop?:
+    | T
+    | {
+        badge?: T;
+        title?: T;
+        titleAccent?: T;
+        text?: T;
+        filters?:
+          | T
+          | {
+              label?: T;
+              id?: T;
+            };
+        sortLabel?: T;
+        polaroids?:
+          | T
+          | {
+              title?: T;
+              date?: T;
+              time?: T;
+              id?: T;
+            };
+        emptyState?:
+          | T
+          | {
+              title?: T;
+              textLine1?: T;
+              textLine2?: T;
+              ctaLabel?: T;
+            };
+        newsletter?:
+          | T
+          | {
+              title?: T;
+              textLine1?: T;
+              textLine2?: T;
+              placeholder?: T;
+              ctaLabel?: T;
+            };
+      };
+  mobile?:
+    | T
+    | {
+        badge?: T;
+        title?: T;
+        text?: T;
+        filters?:
+          | T
+          | {
+              label?: T;
+              id?: T;
+            };
+        statusLabel?: T;
+        emptyState?:
+          | T
+          | {
+              title?: T;
+              text?: T;
+              ctaLabel?: T;
+            };
+        newsletter?:
+          | T
+          | {
+              title?: T;
+              text?: T;
+              placeholder?: T;
+              ctaLabel?: T;
+            };
+        footer?:
+          | T
+          | {
+              tagline?: T;
+              navItems?:
+                | T
+                | {
+                    label?: T;
+                    href?: T;
+                    id?: T;
+                  };
+              socialLabels?:
+                | T
+                | {
+                    label?: T;
+                    id?: T;
+                  };
+              contactLines?:
+                | T
+                | {
+                    text?: T;
+                    id?: T;
+                  };
+              copyright?: T;
+            };
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "contacts-page_select".
+ */
+export interface ContactsPageSelect<T extends boolean = true> {
+  hero?:
+    | T
+    | {
+        badge?: T;
+        title?: T;
+        titleAccent?: T;
+        text?: T;
+        image?: T;
+      };
+  info?:
+    | T
+    | {
+        title?: T;
+        text?: T;
+        columns?:
+          | T
+          | {
+              label?: T;
+              lines?:
+                | T
+                | {
+                    text?: T;
+                    id?: T;
+                  };
+              id?: T;
+            };
+      };
+  form?:
+    | T
+    | {
+        badge?: T;
+        titleBefore?: T;
+        titleAccent?: T;
+        titleAfter?: T;
+        text?: T;
+        nameLabel?: T;
+        namePlaceholder?: T;
+        phoneLabel?: T;
+        phonePlaceholder?: T;
+        emailLabel?: T;
+        emailPlaceholder?: T;
+        messageLabel?: T;
+        messagePlaceholder?: T;
+        submitLabel?: T;
+        successMessage?: T;
+      };
+  map?:
+    | T
+    | {
+        title?: T;
+        addressLine?: T;
+        image?: T;
+      };
+  cta?:
+    | T
+    | {
+        titleDesktop?: T;
+        titleMobileLine1?: T;
+        titleMobileLine2?: T;
+        text?: T;
+        ctaLabelDesktop?: T;
+        ctaLabelMobile?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

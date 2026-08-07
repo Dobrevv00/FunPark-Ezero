@@ -1,0 +1,4 @@
+ERR: Error: Error: missing secret key. A secret key is needed to secure Payload.
+    at BasePayload.init (D:\Claude Drafts\park-ezero\node_modules\payload\src\index.ts:845:13)
+    at async getPayload (D:\Claude Drafts\park-ezero\node_modules\payload\src\index.ts:1227:22)
+    at async main (D:\Claude Drafts\park-ezero\scripts\probe2.ts:8:21)
