@@ -82,6 +82,12 @@ export const ContactsPage: GlobalConfig = {
         },
         { name: "submitLabel", type: "text", label: "Бутон", maxLength: 30 },
         {
+          name: "errorMessage",
+          type: "text",
+          label: "Съобщение при грешка",
+          maxLength: 160,
+        },
+        {
           name: "successMessage",
           type: "text",
           label: "Съобщение при успех",

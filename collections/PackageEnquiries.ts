@@ -1,17 +1,23 @@
 import type { CollectionConfig } from "payload";
 
 /**
- * Запитвания за пакет от страницата „Рождени дни“.
+ * СТАРА колекция — заменена от „enquiries“.
  *
- * Достъп: публично създаване през REST е ЗАБРАНЕНО — записът се прави само от
- * сървърния екшън на страницата (с overrideAccess). Четене само за влезли
- * администратори.
+ * Оставена е регистрирана, за да не се трие таблицата и стари записи (ако има
+ * такива). Скрита е от админ менюто, за да не обърква. Нови записи не влизат
+ * тук — всички форми пишат в „enquiries“.
+ *
+ * За да я видиш в админа, махни `hidden: true` по-долу.
  */
 export const PackageEnquiries: CollectionConfig = {
   slug: "package-enquiries",
-  labels: { singular: "Запитване", plural: "Запитвания" },
+  labels: {
+    singular: "Запитване (архив)",
+    plural: "Запитвания (архив)",
+  },
   admin: {
     group: "Запитвания",
+    hidden: true,
     useAsTitle: "name",
     defaultColumns: ["name", "packageTitle", "phone", "status", "createdAt"],
   },

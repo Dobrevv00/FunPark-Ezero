@@ -7,6 +7,7 @@ import { buildConfig } from "payload";
 import sharp from "sharp";
 
 import { Attractions } from "./collections/Attractions";
+import { Enquiries } from "./collections/Enquiries";
 import { Events } from "./collections/Events";
 import { Media } from "./collections/Media";
 import { PackageEnquiries } from "./collections/PackageEnquiries";
@@ -53,6 +54,9 @@ export default buildConfig({
     Events,
     Attractions,
     Packages,
+    Enquiries,
+    // остава регистрирана само за да не се губят стари записи и таблицата;
+    // всички форми вече пишат в „enquiries“
     PackageEnquiries,
   ],
   globals: [

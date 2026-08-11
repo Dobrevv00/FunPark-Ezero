@@ -72,6 +72,7 @@ export interface Config {
     events: Event;
     attractions: Attraction;
     packages: Package;
+    enquiries: Enquiry;
     'package-enquiries': PackageEnquiry;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -85,6 +86,7 @@ export interface Config {
     events: EventsSelect<false> | EventsSelect<true>;
     attractions: AttractionsSelect<false> | AttractionsSelect<true>;
     packages: PackagesSelect<false> | PackagesSelect<true>;
+    enquiries: EnquiriesSelect<false> | EnquiriesSelect<true>;
     'package-enquiries': PackageEnquiriesSelect<false> | PackageEnquiriesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -315,6 +317,43 @@ export interface Package {
   createdAt: string;
 }
 /**
+ * Запитвания от контактната форма и от пакетите за рожден ден. Записват се автоматично при изпращане на формата.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enquiries".
+ */
+export interface Enquiry {
+  id: number;
+  /**
+   * Задава се автоматично от формата, през която е изпратено.
+   */
+  formSource: 'contact' | 'birthday_packages';
+  status?: ('new' | 'read' | 'in_progress' | 'completed') | null;
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+  /**
+   * Попълва се само от форми, които имат такова поле. Днешните две форми не изпращат тема.
+   */
+  subject?: string | null;
+  message?: string | null;
+  selectedPackage?: (number | null) | Package;
+  /**
+   * Записва се в момента на запитването, за да остане четимо и ако пакетът се промени по-късно.
+   */
+  selectedPackageTitle?: string | null;
+  /**
+   * Адресът, от който е изпратено запитването.
+   */
+  pageUrl?: string | null;
+  /**
+   * Вътрешна бележка — не се показва никъде на сайта.
+   */
+  adminNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "package-enquiries".
  */
@@ -379,6 +418,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'packages';
         value: number | Package;
+      } | null)
+    | ({
+        relationTo: 'enquiries';
+        value: number | Enquiry;
       } | null)
     | ({
         relationTo: 'package-enquiries';
@@ -548,6 +591,25 @@ export interface PackagesSelect<T extends boolean = true> {
         id?: T;
       };
   note?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "enquiries_select".
+ */
+export interface EnquiriesSelect<T extends boolean = true> {
+  formSource?: T;
+  status?: T;
+  name?: T;
+  phone?: T;
+  email?: T;
+  subject?: T;
+  message?: T;
+  selectedPackage?: T;
+  selectedPackageTitle?: T;
+  pageUrl?: T;
+  adminNote?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -977,6 +1039,7 @@ export interface ContactsPage {
     messageLabel?: string | null;
     messagePlaceholder?: string | null;
     submitLabel?: string | null;
+    errorMessage?: string | null;
     /**
      * Съобщенията за грешка при валидация остават в кода, защото са част от логиката на формата.
      */
@@ -1416,6 +1479,7 @@ export interface ContactsPageSelect<T extends boolean = true> {
         messageLabel?: T;
         messagePlaceholder?: T;
         submitLabel?: T;
+        errorMessage?: T;
         successMessage?: T;
       };
   map?:

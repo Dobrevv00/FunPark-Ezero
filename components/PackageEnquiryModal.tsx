@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { isValidBgPhone, isValidEmail } from "@/lib/validation";
-import { submitPackageEnquiry } from "@/app/(frontend)/birthdays/actions";
+import { submitPackageEnquiry } from "@/lib/actions/enquiries";
 
 export type EnquiryLabels = {
   title: string;
@@ -44,6 +44,8 @@ export default function PackageEnquiryModal({
     email: "",
     message: "",
   });
+  // скрито поле за ботове — истинските посетители го оставят празно
+  const [trap, setTrap] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
@@ -85,6 +87,8 @@ export default function PackageEnquiryModal({
       packageId,
       packageTitle,
       ...values,
+      pageUrl: typeof window === "undefined" ? "" : window.location.pathname,
+      honeypot: trap,
     });
     setSending(false);
     if (res.ok) setSent(true);
@@ -191,6 +195,18 @@ export default function PackageEnquiryModal({
                     className="h-[110px] w-full resize-none rounded-[9px] bg-[rgba(161,161,170,0.15)] px-[12px] py-[10px] text-[15px] text-ink outline-none transition-shadow focus:ring-2 focus:ring-forest/40"
                   />
                 </div>
+
+                {/* Капан за ботове — скрит за хората и за екранните четци */}
+                <input
+                  type="text"
+                  name="company"
+                  tabIndex={-1}
+                  autoComplete="off"
+                  aria-hidden="true"
+                  value={trap}
+                  onChange={(e) => setTrap(e.target.value)}
+                  className="pointer-events-none absolute -left-[9999px] size-0 opacity-0"
+                />
 
                 {failed && (
                   <p className="rounded-[9px] bg-red-50 px-[12px] py-[10px] text-[13.5px] font-medium text-red-600">
