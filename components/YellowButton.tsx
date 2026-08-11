@@ -1,15 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useBookingModal } from "./BookingModal";
 
 export default function YellowButton({
   children,
   className = "",
   booking = false,
+  href = "#",
 }: {
   children: string;
   className?: string;
   booking?: boolean;
+  /** По подразбиране е „#“, за да останат старите бутони точно както са. */
+  href?: string;
 }) {
   const { open } = useBookingModal();
   const classes = `flex items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] transition-colors hover:bg-[#e0b32f] ${className}`;
@@ -31,8 +35,17 @@ export default function YellowButton({
     );
   }
 
+  // вътрешните адреси минават през Link, за да няма презареждане на страницата
+  if (href.startsWith("/")) {
+    return (
+      <Link href={href} className={classes}>
+        {label}
+      </Link>
+    );
+  }
+
   return (
-    <a href="#" className={classes}>
+    <a href={href} className={classes}>
       {label}
     </a>
   );

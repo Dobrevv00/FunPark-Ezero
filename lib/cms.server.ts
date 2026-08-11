@@ -2,7 +2,7 @@ import { cache } from "react";
 import { getPayload } from "payload";
 import config from "@payload-config";
 
-import type { Config, Event } from "@/payload-types";
+import type { Config, Event, Package } from "@/payload-types";
 
 type GlobalSlug = keyof Config["globals"];
 
@@ -35,6 +35,28 @@ export const getFooter = cache(() => readGlobal("footer"));
 export const getHomePage = cache(() => readGlobal("home-page"));
 export const getEventsPage = cache(() => readGlobal("events-page"));
 export const getContactsPage = cache(() => readGlobal("contacts-page"));
+export const getBirthdaysPage = cache(() => readGlobal("birthdays-page"));
+
+/** Пакетите за рожден ден, в зададената подредба. */
+export const getPackages = cache(async (): Promise<Package[]> => {
+  try {
+    const payload = await getPayload({ config });
+    const res = await payload.find({
+      collection: "packages",
+      sort: "order",
+      limit: 50,
+      depth: 0,
+      overrideAccess: true,
+    });
+    return res.docs;
+  } catch (err) {
+    console.warn(
+      "[cms] пакетите не можаха да бъдат прочетени.",
+      err instanceof Error ? err.message : err,
+    );
+    return [];
+  }
+});
 
 /** Събития за конкретната версия на страницата, в зададената подредба. */
 export const getEvents = cache(

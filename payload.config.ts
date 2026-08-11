@@ -9,7 +9,10 @@ import sharp from "sharp";
 import { Attractions } from "./collections/Attractions";
 import { Events } from "./collections/Events";
 import { Media } from "./collections/Media";
+import { PackageEnquiries } from "./collections/PackageEnquiries";
+import { Packages } from "./collections/Packages";
 import { Users } from "./collections/Users";
+import { BirthdaysPage } from "./globals/BirthdaysPage";
 import { ContactsPage } from "./globals/ContactsPage";
 import { EventsPage } from "./globals/EventsPage";
 import { FooterGlobal } from "./globals/FooterGlobal";
@@ -44,7 +47,14 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Events, Attractions],
+  collections: [
+    Users,
+    Media,
+    Events,
+    Attractions,
+    Packages,
+    PackageEnquiries,
+  ],
   globals: [
     SiteSettings,
     HeaderGlobal,
@@ -52,6 +62,7 @@ export default buildConfig({
     HomePage,
     EventsPage,
     ContactsPage,
+    BirthdaysPage,
   ],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || "",

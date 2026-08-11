@@ -71,6 +71,8 @@ export interface Config {
     media: Media;
     events: Event;
     attractions: Attraction;
+    packages: Package;
+    'package-enquiries': PackageEnquiry;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -82,6 +84,8 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     events: EventsSelect<false> | EventsSelect<true>;
     attractions: AttractionsSelect<false> | AttractionsSelect<true>;
+    packages: PackagesSelect<false> | PackagesSelect<true>;
+    'package-enquiries': PackageEnquiriesSelect<false> | PackageEnquiriesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -98,6 +102,7 @@ export interface Config {
     'home-page': HomePage;
     'events-page': EventsPage;
     'contacts-page': ContactsPage;
+    'birthdays-page': BirthdaysPage;
   };
   globalsSelect: {
     'site-settings': SiteSettingsSelect<false> | SiteSettingsSelect<true>;
@@ -106,6 +111,7 @@ export interface Config {
     'home-page': HomePageSelect<false> | HomePageSelect<true>;
     'events-page': EventsPageSelect<false> | EventsPageSelect<true>;
     'contacts-page': ContactsPageSelect<false> | ContactsPageSelect<true>;
+    'birthdays-page': BirthdaysPageSelect<false> | BirthdaysPageSelect<true>;
   };
   locale: null;
   widgets: {
@@ -246,6 +252,92 @@ export interface Attraction {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "packages".
+ */
+export interface Package {
+  id: number;
+  /**
+   * Изписва се като заглавие на картата.
+   */
+  title: string;
+  /**
+   * Определя в коя група на страницата излиза пакетът. Без стойност — показва се най-долу, извън групите.
+   */
+  apparatus?: ('aerial' | 'hexagon') | null;
+  /**
+   * По-малкото число излиза първо (в рамките на групата).
+   */
+  order?: number | null;
+  childrenMax?: number | null;
+  adultsMax?: number | null;
+  /**
+   * Напр. 499.00€
+   */
+  priceEur?: string | null;
+  /**
+   * Напр. 975.96 лв
+   */
+  priceBgn?: string | null;
+  /**
+   * Напр. 2ч. и 30м.
+   */
+  duration?: string | null;
+  /**
+   * Напр. Включено ползване на Уред… — сесия 40 минути.
+   */
+  sessionInfo?: string | null;
+  /**
+   * Напр. „Родители“ и „Деца“.
+   */
+  menuGroups?:
+    | {
+        title?: string | null;
+        items?:
+          | {
+              text?: string | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  drinks?:
+    | {
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Показва се най-долу в картата, ако е попълнена.
+   */
+  note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "package-enquiries".
+ */
+export interface PackageEnquiry {
+  id: number;
+  name: string;
+  phone: string;
+  email: string;
+  message?: string | null;
+  /**
+   * Пакетът, за който е запитването.
+   */
+  package?: (number | null) | Package;
+  /**
+   * Записва се в момента на запитването, за да остане четимо и след промяна на пакета.
+   */
+  packageTitle?: string | null;
+  status?: ('new' | 'handled') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
@@ -283,6 +375,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'attractions';
         value: number | Attraction;
+      } | null)
+    | ({
+        relationTo: 'packages';
+        value: number | Package;
+      } | null)
+    | ({
+        relationTo: 'package-enquiries';
+        value: number | PackageEnquiry;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -412,6 +512,57 @@ export interface AttractionsSelect<T extends boolean = true> {
         alt?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "packages_select".
+ */
+export interface PackagesSelect<T extends boolean = true> {
+  title?: T;
+  apparatus?: T;
+  order?: T;
+  childrenMax?: T;
+  adultsMax?: T;
+  priceEur?: T;
+  priceBgn?: T;
+  duration?: T;
+  sessionInfo?: T;
+  menuGroups?:
+    | T
+    | {
+        title?: T;
+        items?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  drinks?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  note?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "package-enquiries_select".
+ */
+export interface PackageEnquiriesSelect<T extends boolean = true> {
+  name?: T;
+  phone?: T;
+  email?: T;
+  message?: T;
+  package?: T;
+  packageTitle?: T;
+  status?: T;
   updatedAt?: T;
   createdAt?: T;
 }
@@ -852,6 +1003,53 @@ export interface ContactsPage {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "birthdays-page".
+ */
+export interface BirthdaysPage {
+  id: number;
+  hero?: {
+    badge?: string | null;
+    title?: string | null;
+    titleAccent?: string | null;
+    text?: string | null;
+  };
+  packages?: {
+    ctaLabel?: string | null;
+    /**
+     * Използвай {children} и {adults}. Напр. „до {children} деца · до {adults} възрастни“.
+     */
+    capacityLabel?: string | null;
+    drinksTitle?: string | null;
+    aerialTitle?: string | null;
+    aerialText?: string | null;
+    hexagonTitle?: string | null;
+    hexagonText?: string | null;
+  };
+  form?: {
+    title?: string | null;
+    intro?: string | null;
+    nameLabel?: string | null;
+    namePlaceholder?: string | null;
+    phoneLabel?: string | null;
+    phonePlaceholder?: string | null;
+    emailLabel?: string | null;
+    emailPlaceholder?: string | null;
+    messageLabel?: string | null;
+    messagePlaceholder?: string | null;
+    submitLabel?: string | null;
+    successMessage?: string | null;
+    errorMessage?: string | null;
+  };
+  cta?: {
+    title?: string | null;
+    text?: string | null;
+    ctaLabel?: string | null;
+  };
+  updatedAt?: string | null;
+  createdAt?: string | null;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
@@ -1236,6 +1434,58 @@ export interface ContactsPageSelect<T extends boolean = true> {
         text?: T;
         ctaLabelDesktop?: T;
         ctaLabelMobile?: T;
+      };
+  updatedAt?: T;
+  createdAt?: T;
+  globalType?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "birthdays-page_select".
+ */
+export interface BirthdaysPageSelect<T extends boolean = true> {
+  hero?:
+    | T
+    | {
+        badge?: T;
+        title?: T;
+        titleAccent?: T;
+        text?: T;
+      };
+  packages?:
+    | T
+    | {
+        ctaLabel?: T;
+        capacityLabel?: T;
+        drinksTitle?: T;
+        aerialTitle?: T;
+        aerialText?: T;
+        hexagonTitle?: T;
+        hexagonText?: T;
+      };
+  form?:
+    | T
+    | {
+        title?: T;
+        intro?: T;
+        nameLabel?: T;
+        namePlaceholder?: T;
+        phoneLabel?: T;
+        phonePlaceholder?: T;
+        emailLabel?: T;
+        emailPlaceholder?: T;
+        messageLabel?: T;
+        messagePlaceholder?: T;
+        submitLabel?: T;
+        successMessage?: T;
+        errorMessage?: T;
+      };
+  cta?:
+    | T
+    | {
+        title?: T;
+        text?: T;
+        ctaLabel?: T;
       };
   updatedAt?: T;
   createdAt?: T;

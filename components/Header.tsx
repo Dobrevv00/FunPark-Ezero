@@ -12,6 +12,7 @@ export { Logo };
 const navLinks = [
   { label: "Начало", href: "/" },
   { label: "Събития", href: "/events" },
+  { label: "Рожденни дни", href: "/birthdays" },
   { label: "Контакти", href: "/contacts" },
 ];
 
