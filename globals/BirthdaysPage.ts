@@ -3,8 +3,8 @@ import type { GlobalConfig } from "payload";
 /** Текстовете на страницата „Рождени дни“ (пакетите са в колекция „Пакети“). */
 export const BirthdaysPage: GlobalConfig = {
   slug: "birthdays-page",
-  label: "Страница „Рождени дни“",
-  admin: { group: "Страници" },
+  label: "Съдържание на страницата",
+  admin: { group: "Рожденни дни" },
   access: { read: () => true },
   fields: [
     {

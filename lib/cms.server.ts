@@ -37,14 +37,18 @@ export const getEventsPage = cache(() => readGlobal("events-page"));
 export const getContactsPage = cache(() => readGlobal("contacts-page"));
 export const getBirthdaysPage = cache(() => readGlobal("birthdays-page"));
 
-/** Пакетите за рожден ден, в зададената подредба. */
+/**
+ * Пакетите за рожден ден — само активните, подредени по полето „Подредба“.
+ * Изключените (`active: false`) остават в CMS, но не се показват на сайта.
+ */
 export const getPackages = cache(async (): Promise<Package[]> => {
   try {
     const payload = await getPayload({ config });
     const res = await payload.find({
       collection: "packages",
+      where: { active: { not_equals: false } },
       sort: "order",
-      limit: 50,
+      limit: 100,
       depth: 0,
       overrideAccess: true,
     });

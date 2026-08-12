@@ -554,12 +554,23 @@ const run = async () => {
     },
   ];
   const drinksTier20 = lines(["Домашна Лимона - 7л.", "Минерална Вода – 4л."]);
+
+  /* Двата отделни списъка се вземат от същите редове — без дублиране на текста. */
+  const parentsTier10 = menuTier10[0].items;
+  const childrenTier10 = menuTier10[1].items;
+  const parentsTier15 = menuTier15[0].items;
+  const childrenTier15 = menuTier15[1].items;
+  const parentsTier20 = menuTier20[0].items;
+  const childrenTier20 = menuTier20[1].items;
   const packages = [
     // ——— набор 1 (499/599/699): Уред Въздушна Въжена градина
     {
       title:
         "Пакет За Рожден Ден с ползване на Въздушна Въжена градина до 10 деца с Уред и до 10 възрастни",
       order: 1,
+      active: true,
+      guestLimit: "до 10 деца · до 10 възрастни",
+      priceEuro: 499,
       apparatus: "aerial" as const,
       childrenMax: 10,
       adultsMax: 10,
@@ -568,13 +579,17 @@ const run = async () => {
       duration: "2ч. и 30м.",
       sessionInfo:
         "Включено ползване на Уред-Въздушна Въжена градина-сесия 40 минути.",
-      menuGroups: menuTier10,
+      parentsItems: parentsTier10,
+      childrenItems: childrenTier10,
       drinks: drinksTier10,
     },
     {
       title:
         "Пакет За Рожден Ден с ползване на Въздушна Въжена градина до 15 деца и до 15 възрастни",
       order: 2,
+      active: true,
+      guestLimit: "до 15 деца · до 15 възрастни",
+      priceEuro: 599,
       apparatus: "aerial" as const,
       childrenMax: 15,
       adultsMax: 15,
@@ -582,13 +597,17 @@ const run = async () => {
       priceBgn: "1171.54 лв",
       duration: "2ч. и 30м.",
       sessionInfo: "Включено ползване на Уред-Хексагон-сесия 40 минути.",
-      menuGroups: menuTier15,
+      parentsItems: parentsTier15,
+      childrenItems: childrenTier15,
       drinks: drinksTier15,
     },
     {
       title:
         "Пакет За Рожден Ден с ползване на Въздушна Въжена градина до 20 деца и до 20 възрастни",
       order: 3,
+      active: true,
+      guestLimit: "до 20 деца · до 20 възрастни",
+      priceEuro: 699,
       apparatus: "aerial" as const,
       childrenMax: 20,
       adultsMax: 20,
@@ -596,14 +615,18 @@ const run = async () => {
       priceBgn: "1367.13 лв",
       duration: "2ч. и 30м.",
       sessionInfo: "Включено ползване на Уред-Хексагон-сесия 40 минути.",
-      menuGroups: menuTier20,
+      parentsItems: parentsTier20,
+      childrenItems: childrenTier20,
       drinks: drinksTier20,
     },
 
     // ——— набор 2 (399/499/599): Уред Хексагон
     {
       title: "Пакет За Рожден Ден до 10 деца и до 10 възрастни",
-      order: 4,
+      order: 1,
+      active: true,
+      guestLimit: "до 10 деца · до 10 възрастни",
+      priceEuro: 399,
       apparatus: "hexagon" as const,
       childrenMax: 10,
       adultsMax: 10,
@@ -612,13 +635,17 @@ const run = async () => {
       duration: "2ч. и 30м.",
       sessionInfo:
         "Включено ползване на Уред-Въздушна Въжена градина-сесия 40 минути.",
-      menuGroups: menuTier10,
+      parentsItems: parentsTier10,
+      childrenItems: childrenTier10,
       drinks: drinksTier10,
     },
     {
       title:
         "Пакет За Рожден Ден с ползване на Въздушна Въжена градина до 15 деца и до 15 възрастни",
-      order: 5,
+      order: 2,
+      active: true,
+      guestLimit: "до 15 деца · до 15 възрастни",
+      priceEuro: 499,
       apparatus: "hexagon" as const,
       childrenMax: 15,
       adultsMax: 15,
@@ -626,13 +653,17 @@ const run = async () => {
       priceBgn: "975.96 лв",
       duration: "2ч. и 30м.",
       sessionInfo: "Включено ползване на Уред-Хексагон-сесия 40 минути.",
-      menuGroups: menuTier15,
+      parentsItems: parentsTier15,
+      childrenItems: childrenTier15,
       drinks: drinksTier15,
     },
     {
       title:
         "Пакет За Рожден Ден с ползване на Въздушна Въжена градина до 20 деца и до 20 възрастни",
-      order: 6,
+      order: 3,
+      active: true,
+      guestLimit: "до 20 деца · до 20 възрастни",
+      priceEuro: 599,
       apparatus: "hexagon" as const,
       childrenMax: 20,
       adultsMax: 20,
@@ -640,7 +671,8 @@ const run = async () => {
       priceBgn: "1171.54 лв",
       duration: "2ч. и 30м.",
       sessionInfo: "Включено ползване на Уред-Хексагон-сесия 40 минути.",
-      menuGroups: menuTier20,
+      parentsItems: parentsTier20,
+      childrenItems: childrenTier20,
       drinks: drinksTier20,
     },
   ];
@@ -648,7 +680,12 @@ const run = async () => {
   for (const data of packages) {
     const existing = await payload.find({
       collection: "packages",
-      where: { order: { equals: data.order } },
+      where: {
+        and: [
+          { title: { equals: data.title } },
+          { apparatus: { equals: data.apparatus } },
+        ],
+      },
       limit: 1,
     });
     if (existing.docs[0]) {

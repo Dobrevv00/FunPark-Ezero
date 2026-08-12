@@ -92,15 +92,59 @@ export default async function BirthdaysPage() {
       .replace("{children}", String(children ?? ""))
       .replace("{adults}", String(adults ?? ""));
 
+  /** „Брой гости“ от CMS; ако е празно — сглобява се от старите две числа. */
+  const guestLimitFor = (p: Package) => {
+    const own = t(p.guestLimit, "");
+    if (own !== "") return own;
+    return p.childrenMax || p.adultsMax
+      ? capacityLabel(p.childrenMax, p.adultsMax)
+      : "";
+  };
+
+  /** Цената е само в евро — знакът се добавя тук. */
+  const priceLabel = (p: Package) => {
+    if (typeof p.priceEuro === "number") {
+      const rounded = Math.round(p.priceEuro * 100) / 100;
+      return `${Number.isInteger(rounded) ? rounded : rounded.toFixed(2)} €`;
+    }
+    // резервно: старото текстово поле, ако новото още не е попълнено
+    return t(p.priceEur, "");
+  };
+
+  /**
+   * Двата списъка („За родители“ и „За деца“). Ако още не са попълнени,
+   * се ползва старото поле „Меню“, за да не изчезне съдържание.
+   */
+  const menuSectionsFor = (p: Package) => {
+    const parents = (p.parentsItems ?? [])
+      .map((i) => t(i.text, ""))
+      .filter((x) => x !== "");
+    const children = (p.childrenItems ?? [])
+      .map((i) => t(i.text, ""))
+      .filter((x) => x !== "");
+
+    if (parents.length > 0 || children.length > 0) {
+      return [
+        { title: "Родители", items: parents },
+        { title: "Деца", items: children },
+      ].filter((g) => g.items.length > 0);
+    }
+
+    return (p.menuGroups ?? []).map((g) => ({
+      title: t(g.title, ""),
+      items: (g.items ?? []).map((i) => t(i.text, "")).filter((x) => x !== ""),
+    }));
+  };
+
   /** Една карта на пакет — разметката е една и съща за всички групи. */
   const renderCard = (p: Package) => (
     <div
       key={p.id}
       className="flex flex-col rounded-[10px] bg-offwhite p-[20px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)] lg:p-[28px]"
     >
-      {(p.childrenMax || p.adultsMax) && (
+      {guestLimitFor(p) !== "" && (
         <span className="self-start rounded-full bg-[rgba(106,142,78,0.12)] px-[12px] py-[6px] font-golos text-[11.5px] font-semibold uppercase tracking-[0.8px] text-forest">
-          {capacityLabel(p.childrenMax, p.adultsMax)}
+          {guestLimitFor(p)}
         </span>
       )}
 
@@ -110,10 +154,7 @@ export default async function BirthdaysPage() {
 
       <div className="mt-[16px] flex flex-wrap items-baseline gap-x-[10px] gap-y-[4px]">
         <span className="font-golos text-[30px] font-extrabold leading-none text-forest lg:text-[34px]">
-          {p.priceEur}
-        </span>
-        <span className="font-golos text-[14px] text-[#545454]">
-          / {p.priceBgn}
+          {priceLabel(p)}
         </span>
       </div>
       {p.duration && (
@@ -130,19 +171,19 @@ export default async function BirthdaysPage() {
 
       {/* Меню по групи */}
       <div className="mt-[18px] flex flex-col gap-[16px]">
-        {(p.menuGroups ?? []).map((group, gi) => (
+        {menuSectionsFor(p).map((group, gi) => (
           <div key={gi}>
             <p className="font-golos text-[11.5px] font-bold uppercase tracking-[1.2px] text-[#a1a1aa]">
               {group.title}
             </p>
             <ul className="mt-[8px] flex flex-col gap-[6px]">
-              {(group.items ?? []).map((item, ii) => (
+              {group.items.map((item, ii) => (
                 <li
                   key={ii}
                   className="flex gap-[8px] font-golos text-[13px] leading-[1.45] text-[#3f3f46]"
                 >
                   <span className="mt-[7px] size-[5px] shrink-0 rounded-full bg-leaf" />
-                  <span>{item.text}</span>
+                  <span>{item}</span>
                 </li>
               ))}
             </ul>
@@ -180,24 +221,25 @@ export default async function BirthdaysPage() {
         <PackageEnquiryModal
           packageId={p.id}
           packageTitle={p.title}
-          ctaLabel={ctaLabel}
+          ctaLabel={t(p.enquiryButtonLabel, ctaLabel)}
           labels={labels}
         />
       </div>
     </div>
   );
 
-  /** Цената като число — чете се от полето „Цена в евро“ (напр. „499.00€“). */
+  /** Цената като число — от новото поле „Цена (€)“, иначе от старото текстово. */
   const priceValue = (p: Package) => {
+    if (typeof p.priceEuro === "number") return p.priceEuro;
     const raw = (p.priceEur ?? "").replace(/[^\d.,]/g, "").replace(",", ".");
     const n = Number.parseFloat(raw);
     return Number.isFinite(n) ? n : Number.POSITIVE_INFINITY;
   };
 
-  /** От най-евтиния към най-скъпия; при равни цени решава полето „Подредба“. */
-  const byPrice = (a: Package, b: Package) => {
-    const diff = priceValue(a) - priceValue(b);
-    return diff !== 0 ? diff : (a.order ?? 0) - (b.order ?? 0);
+  /** В групата редът се определя от полето „Подредба“; при равни — по цена. */
+  const byOrder = (a: Package, b: Package) => {
+    const diff = (a.order ?? 0) - (b.order ?? 0);
+    return diff !== 0 ? diff : priceValue(a) - priceValue(b);
   };
 
   const cheapest = (items: Package[]) =>
@@ -218,13 +260,13 @@ export default async function BirthdaysPage() {
         "Пакети с Уред Въздушна Въжена градина",
       ),
       text: t(page?.packages?.aerialText, ""),
-      items: packages.filter((p) => p.apparatus === "aerial").sort(byPrice),
+      items: packages.filter((p) => p.apparatus === "aerial").sort(byOrder),
     },
     {
       key: "hexagon",
       title: t(page?.packages?.hexagonTitle, "Пакети с Уред Хексагон"),
       text: t(page?.packages?.hexagonText, ""),
-      items: packages.filter((p) => p.apparatus === "hexagon").sort(byPrice),
+      items: packages.filter((p) => p.apparatus === "hexagon").sort(byOrder),
     },
   ]
     .filter((g) => g.items.length > 0)
@@ -232,7 +274,7 @@ export default async function BirthdaysPage() {
 
   const ungrouped = packages
     .filter((p) => p.apparatus !== "aerial" && p.apparatus !== "hexagon")
-    .sort(byPrice);
+    .sort(byOrder);
 
   const groups =
     ungrouped.length > 0

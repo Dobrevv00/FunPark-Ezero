@@ -253,6 +253,8 @@ export interface Attraction {
   createdAt: string;
 }
 /**
+ * Картите на страница „Рожденни дни“. Нов запис се показва на сайта автоматично.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "packages".
  */
@@ -263,34 +265,66 @@ export interface Package {
    */
   title: string;
   /**
-   * Определя в коя група на страницата излиза пакетът. Без стойност — показва се най-долу, извън групите.
+   * В коя от двете секции на страницата излиза пакетът. Без стойност — показва се най-долу, извън групите.
    */
   apparatus?: ('aerial' | 'hexagon') | null;
   /**
-   * По-малкото число излиза първо (в рамките на групата).
+   * По-малко число = по-напред в групата.
    */
   order?: number | null;
-  childrenMax?: number | null;
-  adultsMax?: number | null;
   /**
-   * Напр. 499.00€
+   * Изключено — пакетът не се показва на сайта, но остава тук.
    */
-  priceEur?: string | null;
+  active?: boolean | null;
   /**
-   * Напр. 975.96 лв
+   * Напр. „до 10 деца · до 10 възрастни“.
    */
-  priceBgn?: string | null;
+  guestLimit?: string | null;
   /**
-   * Напр. 2ч. и 30м.
+   * Само число — знакът € се добавя от сайта.
+   */
+  priceEuro?: number | null;
+  /**
+   * Напр. „2ч. и 30м.“
    */
   duration?: string | null;
   /**
-   * Напр. Включено ползване на Уред… — сесия 40 минути.
+   * Напр. „Включено ползване на Уред… — сесия 40 минути.“
    */
   sessionInfo?: string | null;
   /**
-   * Напр. „Родители“ и „Деца“.
+   * Редовете могат да се добавят, махат и пренареждат с влачене.
    */
+  parentsItems?:
+    | {
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  childrenItems?:
+    | {
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  drinks?:
+    | {
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  /**
+   * Празно — ползва се общият текст от „Съдържание на страницата“ (по подразбиране „Запитване“).
+   */
+  enquiryButtonLabel?: string | null;
+  /**
+   * Показва се най-долу в картата, ако е попълнена.
+   */
+  note?: string | null;
+  childrenMax?: number | null;
+  adultsMax?: number | null;
+  priceEur?: string | null;
+  priceBgn?: string | null;
   menuGroups?:
     | {
         title?: string | null;
@@ -303,16 +337,6 @@ export interface Package {
         id?: string | null;
       }[]
     | null;
-  drinks?:
-    | {
-        text?: string | null;
-        id?: string | null;
-      }[]
-    | null;
-  /**
-   * Показва се най-долу в картата, ако е попълнена.
-   */
-  note?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -566,12 +590,35 @@ export interface PackagesSelect<T extends boolean = true> {
   title?: T;
   apparatus?: T;
   order?: T;
+  active?: T;
+  guestLimit?: T;
+  priceEuro?: T;
+  duration?: T;
+  sessionInfo?: T;
+  parentsItems?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  childrenItems?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  drinks?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  enquiryButtonLabel?: T;
+  note?: T;
   childrenMax?: T;
   adultsMax?: T;
   priceEur?: T;
   priceBgn?: T;
-  duration?: T;
-  sessionInfo?: T;
   menuGroups?:
     | T
     | {
@@ -584,13 +631,6 @@ export interface PackagesSelect<T extends boolean = true> {
             };
         id?: T;
       };
-  drinks?:
-    | T
-    | {
-        text?: T;
-        id?: T;
-      };
-  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }
