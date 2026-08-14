@@ -1,10 +1,36 @@
 import Link from "next/link";
+import CookieSettingsLink from "@/components/CookieSettingsLink";
 import { t } from "@/lib/cms";
 import type { Footer as FooterGlobalType } from "@/payload-types";
 
 /** CMS колони + позициите/стила от кода (десктоп колоните имат фиксиран left). */
 type CodeColumn = { title: string; left?: number; items: { label: string; href: string }[] };
 type CmsColumn = { title?: string | null; links?: { label?: string | null; href?: string | null }[] | null };
+
+type LinkItem = { label: string; href: string };
+
+/**
+ * CMS-ът е водещ за текстовете. Два случая, в които кодът допълва:
+ *  · „#“ в CMS означава „адресът още не е зададен“ — тогава важи адресът от кода
+ *    (така правните страници работят без редакция в CMS);
+ *  · линкове, добавени в кода след тези, които CMS познава, също се показват.
+ */
+const mergeLinks = (
+  cms: NonNullable<CmsColumn["links"]>,
+  code: LinkItem[],
+): LinkItem[] => {
+  const rows = Array.from({ length: Math.max(cms.length, code.length) }, (_, j) => {
+    const l = cms[j];
+    const fallback = code[j];
+    if (!l) return fallback;
+    const href = t(l.href, fallback?.href ?? "#");
+    return {
+      label: t(l.label, fallback?.label ?? ""),
+      href: href === "#" ? (fallback?.href ?? "#") : href,
+    };
+  });
+  return rows.filter((row): row is LinkItem => Boolean(row?.label));
+};
 
 const mergeColumns = (
   cms: CmsColumn[] | null | undefined,
@@ -18,12 +44,7 @@ const mergeColumns = (
     return {
       ...col,
       title: t(c.title, col.title),
-      items: links
-        ? links.map((l, j) => ({
-            label: t(l.label, col.items[j]?.label ?? ""),
-            href: t(l.href, col.items[j]?.href ?? "#"),
-          }))
-        : col.items,
+      items: links ? mergeLinks(links, col.items) : col.items,
     };
   });
 };
@@ -47,8 +68,9 @@ const menuItems = [
 
 const infoItems = [
   { label: "Резервации", href: "#" },
-  { label: "Политика за поверителност", href: "#" },
+  { label: "Политика за поверителност", href: "/privacy-policy" },
   { label: "Общи условия", href: "#" },
+  { label: "Политика за бисквитките", href: "/cookie-policy" },
 ];
 
 const columns = [
@@ -58,13 +80,20 @@ const columns = [
 
 const mobileColumns = [
   { title: "Меню", items: menuItems },
-  { title: "Информация", items: [infoItems[0], infoItems[2]] },
+  {
+    title: "Информация",
+    // първите две са и в CMS; правните страници идват от кода, за да са
+    // достъпни и на телефон
+    items: [infoItems[0], infoItems[2], infoItems[1], infoItems[3]],
+  },
 ];
 
+// Потвърдени публични контакти на обекта. Това са резервните стойности в кода —
+// ако в CMS („Footer“ → contactLines) има текст, той е водещ.
 const contacts = [
-  { icon: "/icons/location.svg", w: 12, h: 15, text: "ул. Езерна 1, 9000 Варна" },
+  { icon: "/icons/location.svg", w: 12, h: 15, text: "ул. „Димитър Димов“, 8000 Бургас" },
   { icon: "/icons/call.svg", w: 12, h: 12, text: "+359 88 123 4567" },
-  { icon: "/icons/mail.svg", w: 14, h: 11, text: "info@funparkzero.bg" },
+  { icon: "/icons/mail.svg", w: 14, h: 11, text: "inquiries@kavatsi.com" },
 ];
 
 /** Социални мрежи — светли икони за тъмния фон на футъра */
@@ -103,9 +132,9 @@ function Socials({ className = "", items = socials }: { className?: string; item
 }
 
 const mobileContacts = [
-  { icon: "/icons/location.svg", w: 12, h: 15, text: "ул. Езерна 1, Бургас" },
+  { icon: "/icons/location.svg", w: 12, h: 15, text: "ул. „Димитър Димов“, Бургас" },
   { icon: "/icons/call.svg", w: 12, h: 12, text: "+359 88 123 4567" },
-  { icon: "/icons/mail.svg", w: 14, h: 11, text: "info@funparkzero.bg" },
+  { icon: "/icons/mail.svg", w: 14, h: 11, text: "inquiries@kavatsi.com" },
 ];
 
 function FooterLogo({
@@ -189,7 +218,7 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
           {tagline}
         </p>
 
-        {mobColumns.map((col) => (
+        {mobColumns.map((col, i) => (
           <div key={col.title} className="mt-[26px] flex flex-col items-center">
             <p className="text-[15px] font-medium leading-[19.5px] text-sun">
               {col.title}
@@ -205,6 +234,12 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
                   </a>
                 </li>
               ))}
+              {/* към legal линковете в колона „Информация“ */}
+              {i === 1 && (
+                <li>
+                  <CookieSettingsLink className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white" />
+                </li>
+              )}
             </ul>
           </div>
         ))}
@@ -244,7 +279,7 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
         <Socials className="absolute left-[103px] top-[258px] w-[219px] justify-center" items={links} />
 
         {/* Колони с линкове */}
-        {deskColumns.map((col) => (
+        {deskColumns.map((col, i) => (
           <div key={col.title} className="absolute top-[119px]" style={{ left: col.left }}>
             <p className="text-[15px] font-medium leading-[19.5px] text-sun">
               {col.title}
@@ -260,6 +295,12 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
                   </a>
                 </li>
               ))}
+              {/* към legal линковете в колона „Информация“ */}
+              {i === 1 && (
+                <li>
+                  <CookieSettingsLink className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white" />
+                </li>
+              )}
             </ul>
           </div>
         ))}

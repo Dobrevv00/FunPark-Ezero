@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Golos_Text, Mulish } from "next/font/google";
 import BookingModalProvider from "@/components/BookingModal";
+import CookieConsentProvider from "@/components/CookieConsent";
 import "./globals.css";
 
 const golos = Golos_Text({
@@ -27,7 +28,11 @@ export default function RootLayout({
   return (
     <html lang="bg">
       <body className={`${golos.variable} ${mulish.variable} font-mulish antialiased`}>
-        <BookingModalProvider>{children}</BookingModalProvider>
+        {/* Съгласието за бисквитки обгръща целия публичен сайт.
+            Payload админът има свой layout в app/(payload) и не го вижда. */}
+        <CookieConsentProvider>
+          <BookingModalProvider>{children}</BookingModalProvider>
+        </CookieConsentProvider>
       </body>
     </html>
   );
