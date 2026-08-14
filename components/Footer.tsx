@@ -212,7 +212,7 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
   return (
     <footer className="bg-forest">
       {/* Мобилен вариант */}
-      <div className="flex min-h-[550px] flex-col items-center pb-[30px] pt-[30px] lg:hidden">
+      <div className="flex min-h-[550px] flex-col items-center pb-[44px] pt-[30px] lg:hidden">
         <FooterLogo ring={70} inner={64} logoW={49.6} logoH={33.7} />
         <p className="mt-[12px] w-[219px] text-center font-golos text-[12.7px] leading-[13px] text-white/45">
           {tagline}
@@ -236,7 +236,7 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
               ))}
               {/* към legal линковете в колона „Информация“ */}
               {i === 1 && (
-                <li>
+                <li className="mt-[6px]">
                   <CookieSettingsLink className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white" />
                 </li>
               )}
@@ -267,7 +267,9 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
       </div>
 
       {/* Десктоп вариант */}
-      <div className="relative mx-auto hidden h-[316px] max-w-[1512px] lg:block">
+      {/* височината е увеличена от 316px, за да остане въздух под последния
+          линк в колона „Информация“ („Настройки на бисквитките“) */}
+      <div className="relative mx-auto hidden h-[364px] max-w-[1512px] lg:block">
         <div className="absolute left-[155px] top-[54px]">
           <FooterLogo ring={114} inner={104} logoW={81} logoH={55} />
         </div>
@@ -297,7 +299,7 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
               ))}
               {/* към legal линковете в колона „Информация“ */}
               {i === 1 && (
-                <li>
+                <li className="mt-[6px]">
                   <CookieSettingsLink className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white" />
                 </li>
               )}
