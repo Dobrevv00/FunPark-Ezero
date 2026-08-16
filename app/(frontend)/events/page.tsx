@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ComingSoon, { comingSoonEnabled } from "@/components/ComingSoon";
 import Badge from "@/components/Badge";
 import YellowButton from "@/components/YellowButton";
 import { mediaUrl, t } from "@/lib/cms";
@@ -312,6 +313,9 @@ export default async function EventsPage() {
       getEvents("desktop"),
       getEvents("mobile"),
     ]);
+
+  // при включен режим „Очаквайте скоро“ страницата показва само екрана
+  if (comingSoonEnabled(settings)) return <ComingSoon settings={settings} />;
 
   // ако CMS още няма записи, се ползват списъците от кода
   const desktopEvents =

@@ -175,6 +175,7 @@ export interface User {
 export interface Media {
   id: number;
   alt: string;
+  prefix?: string | null;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -521,6 +522,7 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  prefix?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
@@ -714,6 +716,17 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
  */
 export interface SiteSetting {
   id: number;
+  /**
+   * Когато е включен, публичните страници показват екран „Очаквайте скоро“ вместо съдържанието. Админ панелът и правните страници остават достъпни. Промяната излиза на сайта до около минута.
+   */
+  comingSoon?: {
+    enabled?: boolean | null;
+    title?: string | null;
+    /**
+     * Празните полета използват текстовете от кода.
+     */
+    message?: string | null;
+  };
   brand?: {
     siteName?: string | null;
     /**
@@ -1156,6 +1169,13 @@ export interface BirthdaysPage {
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
+  comingSoon?:
+    | T
+    | {
+        enabled?: T;
+        title?: T;
+        message?: T;
+      };
   brand?:
     | T
     | {

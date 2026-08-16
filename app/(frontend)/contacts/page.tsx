@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import ComingSoon, { comingSoonEnabled } from "@/components/ComingSoon";
 import Badge from "@/components/Badge";
 import YellowButton from "@/components/YellowButton";
 import ContactForm from "@/components/ContactForm";
@@ -56,6 +57,9 @@ export default async function ContactsPage() {
     getFooter(),
     getSiteSettings(),
   ]);
+
+  // при включен режим „Очаквайте скоро“ страницата показва само екрана
+  if (comingSoonEnabled(settings)) return <ComingSoon settings={settings} />;
 
   const hero = {
     badge: t(page?.hero?.badge, "Контакти"),
