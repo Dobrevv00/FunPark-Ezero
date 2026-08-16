@@ -3,16 +3,25 @@ import type { SiteSetting } from "@/payload-types";
 
 /**
  * Екран „Очаквайте скоро“. Показва се вместо съдържанието на публичните
- * страници, когато чекбоксът в Настройки на сайта → „Режим Очаквайте скоро“
- * е включен. Правните страници и админ панелът не минават през него.
+ * страници, докато COMING_SOON_MODE по-долу е true. Правните страници и
+ * админ панелът не минават през него.
+ *
+ * Нарочно ТВЪРД ключ в кода, а не CMS поле: няма нови колони в базата,
+ * така че деплоят не зависи от достъп до Vercel/Neon и не пипа схемата.
  *
  * Никакви бисквитки, форми или заявки — само марка, текст и контакти.
- * Текстовете идват от Payload; ако липсват, се ползват тези от кода.
+ * Контактите и социалните мрежи идват от Payload (съществуващи полета);
+ * ако базата е недостъпна, редът с контакти просто се скрива.
  */
 
-/** Дали екранът е включен. Пази се тук, за да е едно място за всички страници. */
-export const comingSoonEnabled = (settings?: SiteSetting | null): boolean =>
-  settings?.comingSoon?.enabled === true;
+/**
+ * Ключът на режима. Изключване: смени на false, commit и push към main —
+ * Vercel деплойва сам (~минута) и сайтът се показва нормално.
+ */
+export const COMING_SOON_MODE = true;
+
+/** Дали екранът е включен. Едно място за всички страници. */
+export const comingSoonEnabled = (): boolean => COMING_SOON_MODE;
 
 /* Иконите са същите, които тъмният футър ползва върху зелено. */
 const socialsFallback = [
@@ -31,13 +40,11 @@ const socialsFallback = [
 ];
 
 export default function ComingSoon({ settings }: { settings?: SiteSetting | null }) {
-  const title = t(settings?.comingSoon?.title, "Очаквайте скоро!");
-  const message = t(
-    settings?.comingSoon?.message,
+  const title = "Очаквайте скоро!";
+  const message =
     "Подготвяме нещо страхотно — забавление, природа и незабравими моменти " +
-      "за цялото семейство, всичко на едно място. Новият сайт на Fun Park Ezero " +
-      "отваря врати съвсем скоро!",
-  );
+    "за цялото семейство, всичко на едно място. Новият сайт на Fun Park Ezero " +
+    "отваря врати съвсем скоро!";
   const copyright = t(
     settings?.legal?.copyright,
     `© ${new Date().getFullYear()} Fun Park Ezero. Всички права запазени.`,

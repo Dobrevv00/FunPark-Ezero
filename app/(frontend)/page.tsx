@@ -27,7 +27,7 @@ export default async function Home() {
   ]);
 
   // при включен режим „Очаквайте скоро“ страницата показва само екрана
-  if (comingSoonEnabled(settings)) return <ComingSoon settings={settings} />;
+  if (comingSoonEnabled()) return <ComingSoon settings={settings} />;
 
   return (
     <>

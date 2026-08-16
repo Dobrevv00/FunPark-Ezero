@@ -315,7 +315,7 @@ export default async function EventsPage() {
     ]);
 
   // при включен режим „Очаквайте скоро“ страницата показва само екрана
-  if (comingSoonEnabled(settings)) return <ComingSoon settings={settings} />;
+  if (comingSoonEnabled()) return <ComingSoon settings={settings} />;
 
   // ако CMS още няма записи, се ползват списъците от кода
   const desktopEvents =

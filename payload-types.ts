@@ -716,17 +716,6 @@ export interface PayloadMigrationsSelect<T extends boolean = true> {
  */
 export interface SiteSetting {
   id: number;
-  /**
-   * Когато е включен, публичните страници показват екран „Очаквайте скоро“ вместо съдържанието. Админ панелът и правните страници остават достъпни. Промяната излиза на сайта до около минута.
-   */
-  comingSoon?: {
-    enabled?: boolean | null;
-    title?: string | null;
-    /**
-     * Празните полета използват текстовете от кода.
-     */
-    message?: string | null;
-  };
   brand?: {
     siteName?: string | null;
     /**
@@ -1169,13 +1158,6 @@ export interface BirthdaysPage {
  * via the `definition` "site-settings_select".
  */
 export interface SiteSettingsSelect<T extends boolean = true> {
-  comingSoon?:
-    | T
-    | {
-        enabled?: T;
-        title?: T;
-        message?: T;
-      };
   brand?:
     | T
     | {

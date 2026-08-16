@@ -13,32 +13,6 @@ export const SiteSettings: GlobalConfig = {
   fields: [
     {
       type: "group",
-      name: "comingSoon",
-      label: "Режим „Очаквайте скоро“",
-      admin: {
-        description:
-          "Когато е включен, публичните страници показват екран „Очаквайте скоро“ вместо съдържанието. " +
-          "Админ панелът и правните страници остават достъпни. Промяната излиза на сайта до около минута.",
-      },
-      fields: [
-        {
-          name: "enabled",
-          type: "checkbox",
-          label: "Включи екрана „Очаквайте скоро“",
-          defaultValue: false,
-        },
-        { name: "title", type: "text", label: "Заглавие", maxLength: 60 },
-        {
-          name: "message",
-          type: "textarea",
-          label: "Съобщение",
-          maxLength: 240,
-          admin: { description: "Празните полета използват текстовете от кода." },
-        },
-      ],
-    },
-    {
-      type: "group",
       name: "brand",
       label: "Марка",
       fields: [

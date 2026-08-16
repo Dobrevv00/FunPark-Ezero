@@ -35,7 +35,7 @@ export default async function BirthdaysPage() {
   ]);
 
   // при включен режим „Очаквайте скоро“ страницата показва само екрана
-  if (comingSoonEnabled(settings)) return <ComingSoon settings={settings} />;
+  if (comingSoonEnabled()) return <ComingSoon settings={settings} />;
 
   const hero = {
     badge: t(page?.hero?.badge, "Рожденни дни"),
