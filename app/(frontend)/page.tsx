@@ -7,6 +7,7 @@ import RestaurantSection from "@/components/RestaurantSection";
 import SocialFeed from "@/components/SocialFeed";
 import CtaSection from "@/components/CtaSection";
 import Footer from "@/components/Footer";
+import ComingSoon, { comingSoonEnabled } from "@/components/ComingSoon";
 import {
   getFooter,
   getHeader,
@@ -24,6 +25,9 @@ export default async function Home() {
     getFooter(),
     getSiteSettings(),
   ]);
+
+  // при включен режим „Очаквайте скоро“ страницата показва само екрана
+  if (comingSoonEnabled()) return <ComingSoon settings={settings} />;
 
   return (
     <>
