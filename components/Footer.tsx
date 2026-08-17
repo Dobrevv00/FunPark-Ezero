@@ -1,6 +1,10 @@
 import Link from "next/link";
+import BookingLink from "@/components/BookingLink";
 import CookieSettingsLink from "@/components/CookieSettingsLink";
 import { t } from "@/lib/cms";
+
+/** Маркер за линк, който вместо адрес отваря календара за резервации. */
+const BOOKING_HREF = "#booking";
 import type { Footer as FooterGlobalType } from "@/payload-types";
 
 /** CMS колони + позициите/стила от кода (десктоп колоните имат фиксиран left). */
@@ -67,7 +71,7 @@ const menuItems = [
 ];
 
 const infoItems = [
-  { label: "Резервации", href: "#" },
+  { label: "Резервации", href: BOOKING_HREF },
   { label: "Политика за поверителност", href: "/privacy-policy" },
   { label: "Общи условия", href: "/terms" },
   { label: "Политика за бисквитките", href: "/cookie-policy" },
@@ -226,12 +230,18 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
             <ul className="mt-[8px] flex flex-col items-center gap-[10px]">
               {col.items.map((item) => (
                 <li key={item.label}>
-                  <a
-                    href={item.href}
-                    className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white"
-                  >
-                    {item.label}
-                  </a>
+                  {item.href === BOOKING_HREF ? (
+                    <BookingLink className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white">
+                      {item.label}
+                    </BookingLink>
+                  ) : (
+                    <a
+                      href={item.href}
+                      className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white"
+                    >
+                      {item.label}
+                    </a>
+                  )}
                 </li>
               ))}
               {/* към legal линковете в колона „Информация“ */}
@@ -289,12 +299,18 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
             <ul className="mt-[12px] flex flex-col gap-[12px]">
               {col.items.map((item) => (
                 <li key={item.label}>
-                  <a
-                    href={item.href}
-                    className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white"
-                  >
-                    {item.label}
-                  </a>
+                  {item.href === BOOKING_HREF ? (
+                    <BookingLink className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white">
+                      {item.label}
+                    </BookingLink>
+                  ) : (
+                    <a
+                      href={item.href}
+                      className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white"
+                    >
+                      {item.label}
+                    </a>
+                  )}
                 </li>
               ))}
               {/* към legal линковете в колона „Информация“ */}
