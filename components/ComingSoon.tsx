@@ -1,4 +1,7 @@
+import { cookies } from "next/headers";
+import ComingSoonUnlock from "@/components/ComingSoonUnlock";
 import { t } from "@/lib/cms";
+import { PREVIEW_COOKIE } from "@/lib/preview";
 import type { SiteSetting } from "@/payload-types";
 
 /**
@@ -20,8 +23,19 @@ import type { SiteSetting } from "@/payload-types";
  */
 export const COMING_SOON_MODE = true;
 
-/** Дали екранът е включен. Едно място за всички страници. */
-export const comingSoonEnabled = (): boolean => COMING_SOON_MODE;
+/**
+ * Дали екранът да се покаже. Едно място за всички страници.
+ *
+ * Посетител, който е въвел правилната парола, носи httpOnly бисквитка и вижда
+ * сайта нормално. Бисквитката се чете само докато режимът е включен — щом
+ * COMING_SOON_MODE стане false, проверката спира преди `cookies()` и страниците
+ * се връщат към статично генериране.
+ */
+export const comingSoonEnabled = async (): Promise<boolean> => {
+  if (!COMING_SOON_MODE) return false;
+  const jar = await cookies();
+  return jar.get(PREVIEW_COOKIE)?.value !== "1";
+};
 
 /* Иконите са същите, които тъмният футър ползва върху зелено. */
 const socialsFallback = [
@@ -150,6 +164,9 @@ export default function ComingSoon({ settings }: { settings?: SiteSetting | null
             )}
           </div>
         )}
+
+        {/* Вход с парола за екипа, докато сайтът е в подготовка */}
+        <ComingSoonUnlock />
 
         <div className="mt-[30px] flex items-center gap-[14px]">
           {socials.map((s) => (

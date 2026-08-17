@@ -59,7 +59,7 @@ export default async function ContactsPage() {
   ]);
 
   // при включен режим „Очаквайте скоро“ страницата показва само екрана
-  if (comingSoonEnabled()) return <ComingSoon settings={settings} />;
+  if (await comingSoonEnabled()) return <ComingSoon settings={settings} />;
 
   const hero = {
     badge: t(page?.hero?.badge, "Контакти"),
