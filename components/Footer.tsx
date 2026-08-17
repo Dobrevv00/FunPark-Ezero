@@ -69,7 +69,7 @@ const menuItems = [
 const infoItems = [
   { label: "Резервации", href: "#" },
   { label: "Политика за поверителност", href: "/privacy-policy" },
-  { label: "Общи условия", href: "#" },
+  { label: "Общи условия", href: "/terms" },
   { label: "Политика за бисквитките", href: "/cookie-policy" },
 ];
 
