@@ -711,9 +711,12 @@ export default function AdminCalendar() {
                   setSlotError("Невалиден час.");
                   return;
                 }
-                // за днес не се приема час, който вече е минал
-                if (selected === todayKey && newSlot < nowTime) {
-                  setSlotError(`Часът вече е минал (сега е ${nowTime}).`);
+                // минал час се отказва само когато важи единствено за днес;
+                // при период часът важи и за следващите дни, затова е допустим
+                if (!rangeTo && selected === todayKey && newSlot < nowTime) {
+                  setSlotError(
+                    `Часът вече е минал (сега е ${nowTime}). За бъдещи дни задайте „до дата“.`,
+                  );
                   return;
                 }
                 // с попълнена крайна дата часът се задава за целия период;
