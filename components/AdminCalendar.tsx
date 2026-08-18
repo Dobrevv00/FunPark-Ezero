@@ -9,32 +9,38 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  SEAT_TYPES,
   CURRENCY,
   seatPrice,
   emptySeats,
   priceForSeats,
   addBlock,
+  addSchedule,
   addSlotForDay,
   capacityKey,
+  getSchedules,
+  removeSchedule,
+  slotsSourceForDay,
+  updateSchedule,
   confirmBooking,
   countBookings,
   countBookingsAtDayTime,
   deleteBooking,
   getBlocked,
+  GENERAL_SEAT,
   getBookings,
   getCapacityOverrides,
+  getCategories,
   getDaySlotOverrides,
+  getSeatBlocks,
   getSeatCapsFor,
   getSlots,
   getSlotsForDay,
-  SLOT_RANGE,
-  isSlotInRange,
   isValidSlot,
   removeBlock,
   removeCapacityOverride,
   removeSlotForDay,
   resetDaySlots,
+  seatLabel,
   seatsTotal,
   setCapacityFor,
   subscribeToStore,
@@ -47,6 +53,9 @@ import { dayKey, monthNames, monthNamesLower, weekdays } from "./calendarData";
 
 const inputCls =
   "h-[34px] w-full rounded-[8px] bg-[rgba(161,161,170,0.15)] px-[8px] text-[13px] text-ink outline-none focus:ring-2 focus:ring-forest/40";
+
+/** „2026-08-29“ → „29.08“ */
+const shortDate = (key: string) => `${key.slice(8)}.${key.slice(5, 7)}`;
 
 function dateLabelFromKey(key: string) {
   const [y, m, d] = key.split("-").map(Number);
@@ -65,37 +74,100 @@ function buildMonthGrid(year: number, month: number): (number | null)[][] {
   return weeks;
 }
 
-/** Малък редактор за места по видове седалки (за ден или за час) */
-/** Основният вид седалки — през него се разпределя промяната на общия брой */
-const MAIN_SEAT: SeatKey = "mid";
-
+/** Малък редактор за места по категории (за ден или за час) */
 function SeatEditor({
   initial,
   onSave,
   onCancel,
+  planRange,
 }: {
   initial: SeatCounts;
-  onSave: (seats: SeatCounts) => void;
+  /** `forPlan` = стойностите да важат за целия период, не само за този ден */
+  onSave: (seats: SeatCounts, forPlan: boolean) => void;
   onCancel: () => void;
+  /** Показва се, когато часът идва от сесия — напр. „18.08 – 29.08“ */
+  planRange?: string;
 }) {
-  const [seats, setSeats] = useState<SeatCounts>(initial);
-  const total = seatsTotal(seats);
+  // по подразбиране местата се задават за целия период, ако часът е от сесия
+  const [forPlan, setForPlan] = useState(Boolean(planRange));
+  const categories = getCategories();
+  /** Без категории общият брой се пази без разпределение */
+  const noCats = categories.length === 0;
+  // местата по категории (без общата бройка, която чака разпределяне)
+  const [seats, setSeats] = useState<SeatCounts>(() => {
+    const { [GENERAL_SEAT]: _general, ...rest } = initial ?? {};
+    return rest;
+  });
+  /** Общият брой места за часа — задава се първо, после се разпределя */
+  const [target, setTarget] = useState<number>(() => seatsTotal(initial));
+  const assigned = seatsTotal(seats);
+  const left = target - assigned;
+  // без категории е достатъчен само общият брой
+  const canSave = target > 0 && (noCats || left === 0);
 
-  /** Промяна на общия брой — коригира местата от основния вид */
-  const setTotal = (value: number) => {
-    const others = total - seats[MAIN_SEAT];
-    setSeats((c) => ({ ...c, [MAIN_SEAT]: Math.max(0, value - others) }));
+  /** Разпределя целия брой по равно между категориите (остатъкът към първата) */
+  const spread = () => {
+    if (categories.length === 0 || target <= 0) return;
+    const base = Math.floor(target / categories.length);
+    const rest = target - base * categories.length;
+    setSeats(
+      Object.fromEntries(
+        categories.map((c, i) => [c.id, base + (i === 0 ? rest : 0)]),
+      ),
+    );
   };
 
-  const mainLabel =
-    SEAT_TYPES.find((s) => s.key === MAIN_SEAT)?.label ?? MAIN_SEAT;
 
   return (
     <div className="mt-[10px] rounded-[8px] bg-white p-[12px]">
-      <div className="flex flex-wrap items-end gap-[10px]">
-        {SEAT_TYPES.map((s) => (
+      {/* Първо общият брой места за часа */}
+      <div className="flex flex-wrap items-end gap-[10px] border-b border-[#eceae4] pb-[10px]">
+        <label className="flex flex-col gap-[4px] text-[11px] font-semibold text-forest">
+          Общо места за часа
+          <input
+            type="number"
+            min={0}
+            max={600}
+            value={target}
+            onChange={(e) => setTarget(Math.max(0, Number(e.target.value) || 0))}
+            className={`${inputCls} w-[110px] bg-[rgba(106,142,78,0.12)] font-bold text-forest`}
+          />
+        </label>
+        {!noCats && (
+          <>
+            <button
+              type="button"
+              onClick={spread}
+              className="h-[34px] cursor-pointer rounded-[8px] border border-[#dddad2] px-[14px] text-[12.5px] font-semibold text-[#3f3f46] transition-colors hover:border-forest hover:text-forest"
+            >
+              Разпредели по равно
+            </button>
+            <span
+              className={`text-[12px] font-semibold ${
+                left === 0 ? "text-forest" : "text-red-600"
+              }`}
+            >
+              {left === 0
+                ? `разпределени всички ${target}`
+                : left > 0
+                  ? `остават ${left} за разпределяне`
+                  : `${Math.abs(left)} повече от общия брой`}
+            </span>
+          </>
+        )}
+        {noCats && (
+          <span className="text-[12px] text-[#545454]">
+            Няма категории — броят се запазва като общ. Щом създадете категории,
+            ще можете да го разпределите.
+          </span>
+        )}
+      </div>
+
+      {/* После разпределението по категории */}
+      <div className="mt-[10px] flex flex-wrap items-end gap-[10px]">
+        {categories.map((s) => (
           <label
-            key={s.key}
+            key={s.id}
             className="flex flex-col gap-[4px] text-[11px] font-medium text-[#545454]"
           >
             {s.label}
@@ -103,32 +175,34 @@ function SeatEditor({
               type="number"
               min={0}
               max={200}
-              value={seats[s.key]}
+              value={seats[s.id] ?? 0}
               onChange={(e) =>
                 setSeats((c) => ({
                   ...c,
-                  [s.key]: Math.max(0, Number(e.target.value) || 0),
+                  [s.id]: Math.max(0, Number(e.target.value) || 0),
                 }))
               }
               className={`${inputCls} w-[76px]`}
             />
           </label>
         ))}
-        <label className="flex flex-col gap-[4px] text-[11px] font-semibold text-forest">
-          Общо
-          <input
-            type="number"
-            min={0}
-            max={600}
-            value={total}
-            onChange={(e) => setTotal(Math.max(0, Number(e.target.value) || 0))}
-            className={`${inputCls} w-[80px] bg-[rgba(106,142,78,0.12)] font-bold text-forest`}
-          />
-        </label>
+        {!noCats && (
+          <span className="text-[11px] font-semibold text-forest">
+            разпределени {assigned} от {target}
+          </span>
+        )}
         <button
           type="button"
-          onClick={() => onSave(seats)}
-          className="h-[34px] cursor-pointer rounded-[8px] bg-forest px-[16px] text-[13px] font-semibold text-white transition-colors hover:bg-pine"
+          disabled={!canSave}
+          onClick={() =>
+            // без категории пазим общия брой; с категории — разпределението
+            onSave(noCats ? { [GENERAL_SEAT]: target } : seats, forPlan)
+          }
+          className={`h-[34px] rounded-[8px] px-[16px] text-[13px] font-semibold transition-colors ${
+            canSave
+              ? "cursor-pointer bg-forest text-white hover:bg-pine"
+              : "cursor-not-allowed bg-[#e6e4de] text-[#a1a1aa]"
+          }`}
         >
           Запази
         </button>
@@ -140,9 +214,35 @@ function SeatEditor({
           Отказ
         </button>
       </div>
+      {planRange && (
+        <div className="mt-[10px] flex flex-wrap items-center gap-[10px] rounded-[8px] bg-[rgba(106,142,78,0.08)] px-[10px] py-[8px]">
+          <span className="text-[11px] font-semibold text-ink">За кои дни:</span>
+          {(
+            [
+              [true, `целия период ${planRange}`],
+              [false, "само този ден"],
+            ] as const
+          ).map(([value, label]) => (
+            <label
+              key={String(value)}
+              className="flex cursor-pointer items-center gap-[5px] text-[11px] font-medium text-[#3f3f46]"
+            >
+              <input
+                type="radio"
+                checked={forPlan === value}
+                onChange={() => setForPlan(value)}
+                className="cursor-pointer accent-[#17573b]"
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+      )}
+
       <p className="mt-[8px] text-[11px] text-[#a1a1aa]">
-        Общият брой е сборът от трите вида. Промяната му коригира местата от
-        вид „{mainLabel}“.
+        {noCats
+          ? "Задайте общия брой места за часа. Категории не са нужни — после може да ги създадете и да разпределите този брой."
+          : "Задайте общия брой места за часа, после ги разпределете по категории. Записът става възможен, когато сборът съвпадне с общия брой."}
       </p>
     </div>
   );
@@ -285,27 +385,27 @@ function EditBookingModal({
             />
           </label>
           <div />
-          {SEAT_TYPES.map((s) => (
+          {getCategories().map((s) => (
             <label
-              key={s.key}
+              key={s.id}
               className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]"
             >
               {s.label}{" "}
               <span className="text-[11px] font-normal text-[#a1a1aa]">
-                {seatPrice(s.key) === 0
+                {seatPrice(s.id) === 0
                   ? "безплатно"
-                  : `${seatPrice(s.key).toLocaleString("bg-BG")} ${CURRENCY}`}
+                  : `${seatPrice(s.id).toLocaleString("bg-BG")} ${CURRENCY}`}
               </span>
               <input
                 type="number"
                 min={0}
                 max={200}
-                value={draft.seats[s.key]}
+                value={draft.seats[s.id] ?? 0}
                 onChange={(e) => {
                   const v = Math.max(0, Number(e.target.value) || 0);
                   setDraft((d) => ({
                     ...d,
-                    seats: { ...d.seats, [s.key]: v },
+                    seats: { ...d.seats, [s.id]: v },
                   }));
                 }}
                 className={inputCls}
@@ -362,7 +462,11 @@ export default function AdminCalendar() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [capEditor, setCapEditor] = useState<string | null>(null); // "day" | час
   const [newSlot, setNewSlot] = useState("");
+  /** Крайна дата: празно = само избраният ден; с дата = целият период */
+  const [rangeTo, setRangeTo] = useState("");
   const [slotError, setSlotError] = useState("");
+  /** Потвърждение след успешно добавяне */
+  const [slotOk, setSlotOk] = useState("");
   const [pendingSlotDelete, setPendingSlotDelete] = useState<{
     time: string;
     count: number;
@@ -382,6 +486,8 @@ export default function AdminCalendar() {
 
   const weeks = useMemo(() => buildMonthGrid(year, month), [year, month]);
   const todayKey = dayKey(today.getFullYear(), today.getMonth(), today.getDate());
+  /** Текущият час „HH:MM“ — за да не се задават минали часове за днес */
+  const nowTime = `${String(today.getHours()).padStart(2, "0")}:${String(today.getMinutes()).padStart(2, "0")}`;
 
   const dayInfo = (key: string) => {
     const list = bookings.filter((b) => b.dateKey === key);
@@ -410,9 +516,16 @@ export default function AdminCalendar() {
     .filter((b) => b.dateKey === selected)
     .sort((a, b) => a.time.localeCompare(b.time));
 
-  // часовете за избрания ден — индивидуални, ако са зададени такива
+  // часовете за избрания ден: индивидуални › от сесия за периода › стандартни
   const hasOwnSlots = selected in daySlots;
-  const slots = hasOwnSlots ? [...daySlots[selected]].sort() : baseSlots;
+  const slotSource = selected ? slotsSourceForDay(selected) : { source: "standard" as const };
+  const slots = selected ? getSlotsForDay(selected) : baseSlots;
+  const slotSourceLabel =
+    slotSource.source === "day"
+      ? "индивидуални за този ден"
+      : slotSource.source === "plan"
+        ? `по сесия ${slotSource.plan.from.slice(8)}.${slotSource.plan.from.slice(5, 7)} – ${slotSource.plan.to.slice(8)}.${slotSource.plan.to.slice(5, 7)}`
+        : "стандартни часове";
 
   return (
     <section className="mb-[24px] rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
@@ -466,20 +579,31 @@ export default function AdminCalendar() {
               const info = dayInfo(key);
               const isSel = key === selected;
               const isToday = key === todayKey;
+              // минал ден не се избира — няма смисъл да се задават часове назад
+              const isPast = key < todayKey;
               return (
                 <button
                   key={key}
                   type="button"
+                  disabled={isPast}
+                  title={isPast ? "Изминал ден" : undefined}
                   onClick={() => {
+                    if (isPast) return;
                     setSelected(key);
                     setCapEditor(null);
+                    // формата за часове започва чиста за новия ден
+                    setRangeTo("");
+                    setSlotError("");
+                    setSlotOk("");
                   }}
-                  className={`relative flex h-[54px] cursor-pointer flex-col items-center justify-center rounded-[8px] border text-[14px] transition-colors ${
-                    isSel
-                      ? "border-forest bg-forest text-white"
-                      : info.dayBlocked
-                        ? "border-red-200 bg-red-50 text-red-600"
-                        : "border-[#e6e4de] bg-white text-ink hover:border-forest"
+                  className={`relative flex h-[54px] flex-col items-center justify-center rounded-[8px] border text-[14px] transition-colors ${
+                    isPast
+                      ? "cursor-not-allowed border-[#f1f0ec] bg-[#f7f6f3] text-[#c4c2bc]"
+                      : isSel
+                        ? "cursor-pointer border-forest bg-forest text-white"
+                        : info.dayBlocked
+                          ? "cursor-pointer border-red-200 bg-red-50 text-red-600"
+                          : "cursor-pointer border-[#e6e4de] bg-white text-ink hover:border-forest"
                   }`}
                 >
                   <span
@@ -574,7 +698,7 @@ export default function AdminCalendar() {
             <h3 className="font-golos text-[14px] font-bold text-ink">
               Часове
               <span className="ml-[6px] font-normal text-[11px] text-[#a1a1aa]">
-                {hasOwnSlots ? "индивидуални за този ден" : "стандартни часове"}
+                {slotSourceLabel}
               </span>
             </h3>
             <form
@@ -584,10 +708,43 @@ export default function AdminCalendar() {
                   setSlotError("Невалиден час.");
                   return;
                 }
-                if (!isSlotInRange(newSlot)) {
-                  setSlotError(
-                    `Часът трябва да е между ${SLOT_RANGE.min} и ${SLOT_RANGE.max}.`
+                // за днес не се приема час, който вече е минал
+                if (selected === todayKey && newSlot < nowTime) {
+                  setSlotError(`Часът вече е минал (сега е ${nowTime}).`);
+                  return;
+                }
+                // с попълнена крайна дата часът се задава за целия период;
+                // редът на датите няма значение — подреждат се сами
+                if (rangeTo) {
+                  const from = rangeTo < selected ? rangeTo : selected;
+                  const to = rangeTo < selected ? selected : rangeTo;
+                  const existing = getSchedules().find(
+                    (p) => p.from === from && p.to === to,
                   );
+                  if (existing) {
+                    if (existing.times.includes(newSlot)) {
+                      setSlotError("Този час вече е в периода.");
+                      return;
+                    }
+                    updateSchedule(existing.id, {
+                      times: [...existing.times, newSlot],
+                    });
+                  } else {
+                    addSchedule({
+                      from,
+                      to,
+                      times: [newSlot],
+                      // местата за периода тръгват от зададените за този ден
+                      caps: getSeatCapsFor(selected),
+                    });
+                  }
+                  // собствените часове на деня биха скрили периода — махаме ги
+                  if (hasOwnSlots) resetDaySlots(selected);
+                  setSlotOk(
+                    `${newSlot} е добавен за периода ${shortDate(from)} – ${shortDate(to)}.`,
+                  );
+                  setNewSlot("");
+                  setSlotError("");
                   return;
                 }
                 if (slots.includes(newSlot)) {
@@ -603,30 +760,52 @@ export default function AdminCalendar() {
             >
               <label className="flex flex-col gap-[2px]">
                 <span className="pl-[4px] text-[9px] font-semibold uppercase tracking-[1.5px] text-[#a1a1aa]">
-                  {SLOT_RANGE.min} – {SLOT_RANGE.max}
+                  нов час
                 </span>
                 <input
                   type="time"
                   value={newSlot}
-                  min={SLOT_RANGE.min}
-                  max={SLOT_RANGE.max}
                   onChange={(e) => {
                     setNewSlot(e.target.value);
                     setSlotError("");
+                    setSlotOk("");
                   }}
                   aria-label="Нов час (часове и минути)"
-                  title={`Допустим диапазон: ${SLOT_RANGE.min} – ${SLOT_RANGE.max}`}
+                  title="Свободен час — без ограничение в диапазон"
                   className="h-[30px] w-[112px] rounded-[8px] bg-white px-[8px] text-[12px] text-ink outline-none ring-1 ring-[#dddad2] focus:ring-2 focus:ring-forest/40"
+                />
+              </label>
+              <label className="flex flex-col gap-[2px]">
+                <span className="pl-[4px] text-[9px] font-semibold uppercase tracking-[1.5px] text-[#a1a1aa]">
+                  до дата (по избор)
+                </span>
+                <input
+                  type="date"
+                  value={rangeTo}
+                  min={todayKey}
+                  onChange={(e) => {
+                    setRangeTo(e.target.value);
+                    setSlotError("");
+                    setSlotOk("");
+                  }}
+                  aria-label="Крайна дата за периода"
+                  title="Празно = само за избрания ден. Всяка дата е допустима — периодът се подрежда сам."
+                  className="h-[30px] w-[140px] rounded-[8px] bg-white px-[8px] text-[12px] text-ink outline-none ring-1 ring-[#dddad2] focus:ring-2 focus:ring-forest/40"
                 />
               </label>
               <button
                 type="submit"
                 className="h-[30px] cursor-pointer rounded-[8px] bg-sun px-[12px] text-[12px] font-semibold text-black/80 transition-colors hover:bg-[#e0b32f]"
               >
-                + Добави час
+                {rangeTo ? "+ Добави за периода" : "+ Добави час"}
               </button>
             </form>
           </div>
+          {slotOk && !slotError && (
+            <p className="mt-[6px] text-[12px] font-semibold text-forest">
+              {slotOk}
+            </p>
+          )}
           {slotError && (
             <p className="mt-[6px] text-[12px] text-red-600">{slotError}</p>
           )}
@@ -652,7 +831,13 @@ export default function AdminCalendar() {
             {slots.map((slot) => {
               const slotKey = `${selected}|${slot}`;
               const caps = getSeatCapsFor(selected, slot);
-              const cap = seatsTotal(caps);
+              const seatBlocks = getSeatBlocks(selected, slot);
+              const blockedSeats = Object.values(seatBlocks).reduce(
+                (s, b) => s + b.count,
+                0,
+              );
+              // показваме реално свободните места: зададените минус блокираните
+              const cap = Math.max(0, seatsTotal(caps) - blockedSeats);
               const taken = countBookings(bookings, selected, slot);
               const isBlocked =
                 selInfo.dayBlocked || blocked.includes(slotKey);
@@ -674,6 +859,19 @@ export default function AdminCalendar() {
                     <span className="w-[86px] shrink-0 text-[13px] text-[#545454]">
                       {taken}/{cap} места
                     </span>
+                    {blockedSeats > 0 && (
+                      <span
+                        title={Object.entries(seatBlocks)
+                          .map(
+                            ([id, b]) =>
+                              `${seatLabel(id)}: ${b.count}${b.reason ? ` — ${b.reason}` : ""}`,
+                          )
+                          .join(" · ")}
+                        className="shrink-0 rounded-full bg-[rgba(244,198,63,0.28)] px-[8px] py-[3px] text-[11px] font-semibold text-ink"
+                      >
+                        {blockedSeats} блокирани
+                      </span>
+                    )}
                     <span className="h-[7px] min-w-[70px] flex-1 overflow-hidden rounded-full bg-[#eceae4]">
                       <span
                         className={`block h-full rounded-full ${
@@ -689,17 +887,20 @@ export default function AdminCalendar() {
                     )}
                     <button
                       type="button"
-                      title={`Промени местата за ${slot} на ${dateLabelFromKey(selected)}`}
+                      title={`${seatsTotal(caps) > 0 ? "Промени местата" : "Задай места"} за ${slot} на ${dateLabelFromKey(selected)}`}
                       onClick={() =>
                         setCapEditor(capEditor === slot ? null : slot)
                       }
                       className={`cursor-pointer rounded-[8px] border px-[14px] py-[7px] text-[12.5px] font-semibold transition-colors ${
                         capEditor === slot
                           ? "border-forest bg-[rgba(106,142,78,0.1)] text-forest"
-                          : "border-[#dddad2] text-[#3f3f46] hover:border-forest hover:text-forest"
+                          : seatsTotal(caps) === 0
+                            ? "border-sun bg-[rgba(244,198,63,0.18)] text-ink hover:border-forest hover:text-forest"
+                            : "border-[#dddad2] text-[#3f3f46] hover:border-forest hover:text-forest"
                       }`}
                     >
-                      Промени местата
+                      {/* докато няма зададени места, бутонът приканва да се зададат */}
+                      {seatsTotal(caps) > 0 ? "Промени местата" : "Задай места"}
                     </button>
                     <button
                       type="button"
@@ -721,7 +922,7 @@ export default function AdminCalendar() {
                     </button>
                     <button
                       type="button"
-                      aria-label={`Изтрий час ${slot}`}
+                      aria-label={`Премахни час ${slot} само за този ден`}
                       title={`Премахни ${slot} само за ${dateLabelFromKey(selected)}`}
                       onClick={() => {
                         const count = countBookingsAtDayTime(selected, slot);
@@ -729,19 +930,55 @@ export default function AdminCalendar() {
                           setPendingSlotDelete({ time: slot, count });
                         } else {
                           removeSlotForDay(selected, slot);
+                          setSlotOk(
+                            `${slot} е премахнат само за ${dateLabelFromKey(selected)}.`,
+                          );
                         }
                       }}
                       className="cursor-pointer px-[6px] text-[15px] leading-none text-[#a1a1aa] transition-colors hover:text-red-600"
                     >
                       ✕
                     </button>
+                    {/* часът идва от сесия — може да се махне и от целия период */}
+                    {slotSource.source === "plan" &&
+                      slotSource.plan.times.includes(slot) && (
+                        <button
+                          type="button"
+                          aria-label={`Премахни час ${slot} от целия период`}
+                          title={`Премахни ${slot} от периода ${shortDate(slotSource.plan.from)} – ${shortDate(slotSource.plan.to)}`}
+                          onClick={() => {
+                            const plan = slotSource.plan;
+                            const rest = plan.times.filter((t) => t !== slot);
+                            if (rest.length === 0) removeSchedule(plan.id);
+                            else updateSchedule(plan.id, { times: rest });
+                            setSlotOk(
+                              `${slot} е премахнат от периода ${shortDate(plan.from)} – ${shortDate(plan.to)}.`,
+                            );
+                          }}
+                          className="cursor-pointer rounded-[8px] border border-[#dddad2] px-[10px] py-[6px] text-[11.5px] font-semibold text-[#3f3f46] transition-colors hover:border-red-400 hover:text-red-600"
+                        >
+                          Премахни час
+                        </button>
+                      )}
                   </div>
                   {capEditor === slot && (
                     <>
                       <SeatEditor
                         initial={caps}
-                        onSave={(seats) => {
-                          setCapacityFor(selected, slot, seats);
+                        planRange={
+                          slotSource.source === "plan"
+                            ? `${shortDate(slotSource.plan.from)} – ${shortDate(slotSource.plan.to)}`
+                            : undefined
+                        }
+                        onSave={(seats, forPlan) => {
+                          if (forPlan && slotSource.source === "plan") {
+                            // местата важат за всички дни и часове от сесията
+                            updateSchedule(slotSource.plan.id, { caps: seats });
+                            // ако за този час е имало отделна стойност, тя би скрила периода
+                            removeCapacityOverride(capacityKey(selected, slot));
+                          } else {
+                            setCapacityFor(selected, slot, seats);
+                          }
                           setCapEditor(null);
                         }}
                         onCancel={() => setCapEditor(null)}
@@ -808,8 +1045,9 @@ export default function AdminCalendar() {
                     {b.phone} · {b.email}
                     {b.seats &&
                       ` · ${
-                        SEAT_TYPES.filter((s) => b.seats[s.key] > 0)
-                          .map((s) => `${s.label} ×${b.seats[s.key]}`)
+                        Object.entries(b.seats)
+                          .filter(([, n]) => (n ?? 0) > 0)
+                          .map(([key, n]) => `${seatLabel(key)} ×${n}`)
                           .join(", ") || "—"
                       }`}
                   </p>

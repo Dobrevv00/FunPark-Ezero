@@ -17,7 +17,7 @@ import {
 } from "./calendarData";
 import {
   CURRENCY,
-  SEAT_TYPES,
+  digitalFee,
   priceForSeats,
   printedFee,
   seatPrice,
@@ -27,14 +27,17 @@ import {
   getBlockedDaySet,
   getBookings,
   getCapacityFor,
+  getCategories,
   getSlots,
   getSlotsForDay,
   isSlotBlocked,
   seatCapFor,
   seatLabel,
   seatsTotal,
+  subscribeToStore,
   tryBook,
   type BookingRecord,
+  type SeatCategory,
   type SeatCounts,
   type SeatKey,
 } from "@/lib/bookingStore";
@@ -128,6 +131,12 @@ function Modal({
 }) {
   const [step, setStep] = useState(1);
   const now = useMemo(() => new Date(), []);
+  /** Днешната дата като ключ „2026-08-18“ — за текста при липса на часове */
+  const todayKey = useMemo(
+    () =>
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+    [now],
+  );
   const [view, setView] = useState(
     initialDate
       ? { y: initialDate.y, m: initialDate.m }
@@ -139,10 +148,26 @@ function Modal({
   const [bookings, setBookings] = useState<BookingRecord[]>(() => getBookings());
   const [selectedSlot, setSelectedSlot] = useState(() => {
     const s = getSlots();
-    return s.includes("10:30") ? "10:30" : (s[0] ?? "");
+    // без предварително избран час — взима първия зададен от панела
+    return s[0] ?? "";
   });
   const [seatQty, setSeatQty] = useState<SeatCounts>(emptySeats);
   const [availabilityError, setAvailabilityError] = useState("");
+  // категориите места се управляват от админ панела, затова се четат от хранилището
+  const [categories, setCategories] = useState<SeatCategory[]>([]);
+
+  useEffect(() => {
+    const refresh = () => setCategories(getCategories());
+    refresh();
+    return subscribeToStore(refresh);
+  }, []);
+
+  /** Категориите във вида, който екраните ползват */
+  const seatTypes = useMemo(
+    () => categories.map((c) => ({ key: c.id, label: c.label })),
+    [categories],
+  );
+  const qtyOf = (seat: SeatKey) => seatQty[seat] ?? 0;
 
   const dateKey = selectedDate
     ? `${selectedDate.y}-${String(selectedDate.m + 1).padStart(2, "0")}-${String(selectedDate.d).padStart(2, "0")}`
@@ -166,7 +191,7 @@ function Modal({
   useEffect(() => {
     if (slots.length === 0) return;
     if (!slots.includes(selectedSlot)) {
-      setSelectedSlot(slots.includes("10:30") ? "10:30" : slots[0]);
+      setSelectedSlot(slots[0]);
     }
   }, [slots, selectedSlot]);
 
@@ -310,18 +335,20 @@ function Modal({
 
   // печатният билет добавя такса към сумата за плащане (цените се задават в админ панела)
   const printedTicketFee = printedFee();
-  const deliveryFee = delivery === "printed" ? printedTicketFee : 0;
+  // таксата е за целия билет — начислява се веднъж, независимо от броя места
+  const deliveryFee = delivery === "printed" ? printedTicketFee : digitalFee();
   const totalDue = totalPrice + deliveryFee;
 
   const canProceed =
     step === 1
-      ? selectedDate !== null
+      ? // ден без зададени часове не пуска напред
+        selectedDate !== null && slots.length > 0
       : step === 2
         ? selectedSlot !== "" &&
           !isSlotBlocked(dateKey, selectedSlot) &&
           !isSlotPast(selectedSlot) &&
           totalSelected >= 1 &&
-          SEAT_TYPES.every((s) => seatQty[s.key] <= seatFree(s.key)) &&
+          seatTypes.every((s) => qtyOf(s.key) <= seatFree(s.key)) &&
           totalSelected <= selectedCapacity - countFor(selectedSlot)
         : step === 3
           ? totalSelected > 0
@@ -338,7 +365,7 @@ function Modal({
   );
 
   /** Обобщение на избраните седалки, напр. „1 × До 30 кг · 2 × От 30 до 60 кг“ */
-  const ticketsSummary = SEAT_TYPES.filter((s) => seatQty[s.key] > 0)
+  const ticketsSummary = seatTypes.filter((s) => qtyOf(s.key) > 0)
     .map((s) => `${seatQty[s.key]} × ${s.label}`)
     .join(" · ");
 
@@ -506,6 +533,15 @@ function Modal({
               ))}
             </div>
 
+            {/* избран ден без часове — резервацията не може да продължи */}
+            {selectedDate !== null && slots.length === 0 && (
+              <p className="mt-[20px] rounded-[10px] bg-[rgba(244,198,63,0.22)] px-[16px] py-[12px] text-center font-golos text-[14px] font-semibold leading-[1.5] text-ink">
+                {dateKey === todayKey
+                  ? "Няма зададени часове за днес"
+                  : "Няма зададени часове за този ден"}
+              </p>
+            )}
+
             <div className="mt-[27px]">
               <Legend items={dateLegend} />
             </div>
@@ -584,9 +620,15 @@ function Modal({
                   Общо избрани: {totalSelected}
                 </span>
               </div>
-              {SEAT_TYPES.map((s) => {
+              {seatTypes.length === 0 && (
+                <p className="rounded-[10px] bg-[rgba(161,161,170,0.15)] px-[14px] py-[12px] font-golos text-[13.5px] leading-[1.5] text-[#545454]">
+                  В момента няма обявени видове билети. Свържете се с нас за
+                  резервация.
+                </p>
+              )}
+              {seatTypes.map((s) => {
                 const free = seatFree(s.key);
-                const qty = seatQty[s.key];
+                const qty = qtyOf(s.key);
                 const soldOut = free === 0;
                 const canMinus = qty > 0;
                 const canPlus = canAdd(s.key);
@@ -671,8 +713,8 @@ function Modal({
             )}
 
             <div className="flex flex-col gap-[14px]">
-              {SEAT_TYPES.filter((s) => seatQty[s.key] > 0).map((s) => {
-                const qty = seatQty[s.key];
+              {seatTypes.filter((s) => qtyOf(s.key) > 0).map((s) => {
+                const qty = qtyOf(s.key);
                 const unit = seatPrice(s.key);
                 return (
                   <div
@@ -1049,8 +1091,8 @@ function Modal({
                 {totalSelected === 1 ? "място" : "места"}
               </div>
               <div className="flex min-h-[55px] items-center rounded-[10px] bg-white px-[17px] py-[10px] font-golos text-[15px] tracking-[-0.15px] text-black">
-                {SEAT_TYPES.filter((s) => seatQty[s.key] > 0)
-                  .map((s) => `${s.label} × ${seatQty[s.key]}`)
+                {seatTypes.filter((s) => qtyOf(s.key) > 0)
+                  .map((s) => `${s.label} × ${qtyOf(s.key)}`)
                   .join(" · ")}
               </div>
               <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">

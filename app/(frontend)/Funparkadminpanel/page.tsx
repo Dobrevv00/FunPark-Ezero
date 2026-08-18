@@ -4,15 +4,17 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  SLOT_CAPACITY,
   CURRENCY,
   DEFAULT_PRINTED_FEE,
-  DEFAULT_SEAT_PRICES,
+  defaultSeatCaps,
   emptySeats,
+  getCategories,
   getPrices,
   priceForSeats,
+  seatLabel,
   setPrices,
   type PriceSettings,
+  type SeatCategory,
   addBlock,
   addSlot,
   addSlotForDay,
@@ -24,11 +26,8 @@ import {
   getCapacityOverrides,
   getDaySlotOverrides,
   getSlots,
-  SLOT_RANGE,
-  isSlotInRange,
   isValidSlot,
   resetDaySlots,
-  SEAT_TYPES,
   confirmBooking,
   removeBlock,
   removeCapacityOverride,
@@ -45,14 +44,19 @@ import {
 import { ADMIN_PASS, ADMIN_USER, AUTH_KEY, isAdminAuthed } from "@/lib/adminAuth";
 import { Logo } from "@/components/Logo";
 import AdminCalendar from "@/components/AdminCalendar";
+import {
+  CategoriesSection,
+  TicketDeliverySection,
+} from "@/components/AdminSetup";
 import { monthNamesLower } from "@/components/calendarData";
 
-/** Обобщение на билетите по видове седалки, напр. „1 × До 30 кг · 2 × От 30 до 60 кг“ */
+/** Обобщение на билетите по категории, напр. „1 × До 30 кг · 2 × От 30 до 60 кг“ */
 function ticketsLabel(b: BookingRecord) {
   if (!b.seats) return "—";
   return (
-    SEAT_TYPES.filter((s) => (b.seats[s.key] ?? 0) > 0)
-      .map((s) => `${b.seats[s.key]} × ${s.label}`)
+    Object.entries(b.seats)
+      .filter(([, n]) => (n ?? 0) > 0)
+      .map(([key, n]) => `${n} × ${seatLabel(key)}`)
       .join(" · ") || "—"
   );
 }
@@ -79,9 +83,11 @@ const inputBase =
 
 const inputCls = `${inputBase} w-full`;
 
-/** Форматиране на цена: „16“, „1,99“, „0“ */
-const priceLabel = (n: number) =>
-  Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ",");
+/** Форматиране на цена: „16“, „1,99“, „0“. Липсваща стойност се чете като 0. */
+const priceLabel = (n: number | undefined | null) => {
+  const v = Number(n) || 0;
+  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(".", ",");
+};
 
 /** Приема „1,99“ и „1.99“; връща null при невалидна стойност */
 const parsePrice = (v: string) => {
@@ -93,14 +99,22 @@ const parsePrice = (v: string) => {
 };
 
 function PricesSection() {
-  const fields = [
-    ...SEAT_TYPES.map((s) => ({ key: s.key as keyof PriceSettings, label: s.label })),
-    { key: "printedFee" as keyof PriceSettings, label: "Такса печатен билет" },
-  ];
+  const [cats, setCats] = useState<SeatCategory[]>([]);
+  useEffect(() => {
+    const refresh = () => setCats(getCategories());
+    refresh();
+    return subscribeToStore(refresh);
+  }, []);
+
+  // само цените по категории; таксите за вида билет са в отделна секция
+  const fields = cats.map((s) => ({
+    key: s.id as keyof PriceSettings,
+    label: s.label,
+  }));
 
   const [current, setCurrent] = useState<PriceSettings>({
-    ...DEFAULT_SEAT_PRICES,
     printedFee: DEFAULT_PRINTED_FEE,
+    digitalFee: 0,
   });
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
@@ -113,12 +127,12 @@ function PricesSection() {
       // не презаписваме полетата, докато администраторът пише в тях
       setDirty((isDirty) => {
         if (!isDirty) {
-          setDraft({
-            light: priceLabel(p.light),
-            mid: priceLabel(p.mid),
-            heavy: priceLabel(p.heavy),
-            printedFee: priceLabel(p.printedFee),
-          });
+          // по едно поле за всяка съществуваща категория
+          setDraft(
+            Object.fromEntries(
+              getCategories().map((c) => [c.id, priceLabel(p[c.id] ?? 0)]),
+            ),
+          );
         }
         return isDirty;
       });
@@ -149,10 +163,18 @@ function PricesSection() {
         Цени на билетите
       </h2>
       <p className="mt-[4px] text-[13px] text-[#545454]">
-        Цената на билета се определя от вида седалка. Тук можете да я промените —
-        новите цени важат веднага за всички нови резервации. Стойност 0 означава
-        безплатен билет. Приемат се и стотинки (напр. 1,99).
+        Цена на едно място за всяка категория, която сте създали. Новите цени
+        важат веднага за всички нови резервации. Стойност 0 означава безплатно.
+        Приемат се и стотинки (напр. 1,99). Таксата според вида на билета се
+        задава в секция „Вид на билета“ по-долу.
       </p>
+
+      {cats.length === 0 && (
+        <p className="mt-[12px] rounded-[8px] bg-[rgba(244,198,63,0.18)] px-[12px] py-[10px] text-[13px] font-medium text-ink">
+          Още няма категории. Създайте ги в секция „Категории места“ — там
+          задавате име, брой места и цена.
+        </p>
+      )}
 
       <form onSubmit={save} className="mt-[16px] flex flex-wrap items-end gap-[12px]">
         {fields.map((f, i) => {
@@ -203,27 +225,19 @@ function PricesSection() {
       </form>
 
       <div className="mt-[16px] flex flex-wrap items-center gap-[8px]">
-        {SEAT_TYPES.map((s) => (
+        {cats.map((s) => (
           <span
-            key={s.key}
+            key={s.id}
             className="rounded-full bg-white px-[12px] py-[6px] text-[13px] text-[#3f3f46]"
           >
             {s.label}:{" "}
             <span className="font-semibold text-forest">
-              {current[s.key] === 0
+              {(current[s.id] ?? 0) === 0
                 ? "безплатно"
-                : `${priceLabel(current[s.key])} ${CURRENCY}`}
+                : `${priceLabel(current[s.id] ?? 0)} ${CURRENCY}`}
             </span>
           </span>
         ))}
-        <span className="rounded-full bg-white px-[12px] py-[6px] text-[13px] text-[#3f3f46]">
-          Печатен билет:{" "}
-          <span className="font-semibold text-forest">
-            {current.printedFee === 0
-              ? "безплатно"
-              : `+${priceLabel(current.printedFee)} ${CURRENCY}`}
-          </span>
-        </span>
       </div>
 
       <p className="mt-[12px] text-[12px] text-[#a1a1aa]">
@@ -240,18 +254,25 @@ function CapacitySection() {
   const [slots, setSlotsState] = useState<string[]>([]);
   const [capDate, setCapDate] = useState("");
   const [capTime, setCapTime] = useState(""); // "" = целият ден
-  const [capSeats, setCapSeats] = useState<SeatCounts>({
-    light: 1,
-    mid: 14,
-    heavy: 5,
-  });
-  const [capTotal, setCapTotal] = useState(20); // целеви общ брой
+  // започва от местата, зададени в самите категории
+  const [capSeats, setCapSeats] = useState<SeatCounts>({});
+  const [capTotal, setCapTotal] = useState(0); // целеви общ брой
   const [capError, setCapError] = useState("");
+  const [cats, setCats] = useState<SeatCategory[]>([]);
 
   useEffect(() => {
     const refresh = () => {
       setOverrides(getCapacityOverrides());
       setSlotsState(getSlots());
+      const list = getCategories();
+      setCats(list);
+      // празната форма се запълва с местата по подразбиране от категориите
+      setCapSeats((prev) =>
+        Object.keys(prev).length === 0 ? defaultSeatCaps() : prev,
+      );
+      setCapTotal((prev) =>
+        prev === 0 ? list.reduce((s, c) => s + c.places, 0) : prev,
+      );
     };
     refresh();
     return subscribeToStore(refresh);
@@ -286,10 +307,12 @@ function CapacitySection() {
         Капацитет по дни
       </h2>
       <p className="mt-[4px] text-[13px] text-[#545454]">
-        По подразбиране всеки ден има {SLOT_CAPACITY} места на час (
-        {SEAT_TYPES.map((s) => `${s.label} — ${s.cap}`).join(", ")}). Тук можете
-        да зададете различен брой места по видове седалки за цял ден или само за
-        определен час. Общият капацитет е сборът от видовете.
+        По подразбиране важат местата от категориите (
+        {cats.length > 0
+          ? `${cats.map((s) => `${s.label} — ${s.places}`).join(", ")}; общо ${cats.reduce((s, c) => s + c.places, 0)}`
+          : "все още няма създадени категории"}
+        ). Тук можете да зададете различен брой места за цял ден или само за
+        определен час. Общият капацитет е сборът от категориите.
       </p>
 
       <form onSubmit={submit} className="mt-[16px] flex flex-wrap items-end gap-[12px]">
@@ -320,9 +343,9 @@ function CapacitySection() {
             ))}
           </select>
         </label>
-        {SEAT_TYPES.map((s) => (
+        {cats.map((s) => (
           <label
-            key={s.key}
+            key={s.id}
             className="flex flex-col gap-[4px] text-[12px] font-medium text-[#545454]"
           >
             {s.label}
@@ -330,10 +353,10 @@ function CapacitySection() {
               type="number"
               min={0}
               max={200}
-              value={capSeats[s.key]}
+              value={capSeats[s.id] ?? 0}
               onChange={(e) => {
                 const v = Math.max(0, Number(e.target.value) || 0);
-                setCapSeats((c) => ({ ...c, [s.key]: v }));
+                setCapSeats((c) => ({ ...c, [s.id]: v }));
                 setCapError("");
               }}
               className={`${inputCls} w-[86px]`}
@@ -406,7 +429,11 @@ function CapacitySection() {
                 </span>
                 {time && <span className="text-ink">{time} ч</span>}
                 <span className="text-forest">
-                  {total} места ({SEAT_TYPES.map((s) => seats[s.key]).join("/")})
+                  {total} места (
+                  {Object.entries(seats)
+                    .map(([k, n]) => `${seatLabel(k)}: ${n}`)
+                    .join(" · ")}
+                  )
                 </span>
                 <button
                   type="button"
@@ -462,12 +489,6 @@ function SlotsSection() {
     e.preventDefault();
     if (!isValidSlot(newSlot)) {
       setError("Въведете валиден час.");
-      return;
-    }
-    if (!isSlotInRange(newSlot)) {
-      setError(
-        `Часът трябва да е между ${SLOT_RANGE.min} и ${SLOT_RANGE.max}.`
-      );
       return;
     }
     if (visibleSlots.includes(newSlot)) {
@@ -527,19 +548,17 @@ function SlotsSection() {
           <span>
             Нов час{" "}
             <span className="text-[11px] font-normal text-[#a1a1aa]">
-              ({SLOT_RANGE.min} – {SLOT_RANGE.max})
+              (свободен, без ограничение)
             </span>
           </span>
           <input
             type="time"
             value={newSlot}
-            min={SLOT_RANGE.min}
-            max={SLOT_RANGE.max}
             onChange={(e) => {
               setNewSlot(e.target.value);
               setError("");
             }}
-            title={`Допустим диапазон: ${SLOT_RANGE.min} – ${SLOT_RANGE.max}`}
+            title="Свободен час — без ограничение в диапазон"
             className={`${inputCls} w-[130px]`}
           />
         </label>
@@ -838,7 +857,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [view, setView] = useState<"calendar" | "list">("calendar");
 
   useEffect(() => {
     const refresh = () => setBookings(getBookings());
@@ -955,8 +973,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
   const cellSeats = (b: BookingRecord, isEditing: boolean) =>
     isEditing && draft ? (
       <div className="flex flex-col gap-[6px]">
-        {SEAT_TYPES.map((s) => (
-          <div key={s.key}>{seatInput(s.key, s.label)}</div>
+        {getCategories().map((s) => (
+          <div key={s.id}>{seatInput(s.id, s.label)}</div>
         ))}
         <p className="text-[12px] font-semibold text-forest">
           Общо: {seatsTotal(draft.seats)}{" "}
@@ -1116,162 +1134,11 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <main className="mx-auto max-w-[1100px] px-[16px] pt-[24px]">
-        {/* Превключвател между календарен и списъчен изглед */}
-        <div className="mb-[20px] inline-flex rounded-[10px] bg-offwhite p-[4px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
-          {(
-            [
-              ["calendar", "📅 Календар"],
-              ["list", "📋 Списък"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setView(id)}
-              className={`cursor-pointer rounded-[8px] px-[20px] py-[8px] font-golos text-[14px] font-semibold transition-colors ${
-                view === id
-                  ? "bg-forest text-white"
-                  : "text-[#545454] hover:text-forest"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {view === "calendar" && (
-          <>
-            <AdminCalendar />
-            {/* цените са достъпни и от двата изгледа */}
-            <PricesSection />
-          </>
-        )}
-
-        {view === "list" && (
-          <>
-            <SlotsSection />
-            <CapacitySection />
-            <PricesSection />
-            <BlockSection />
-
-        {/* Регистър */}
-        <section className="rounded-[10px] bg-offwhite p-[16px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)] sm:p-[24px]">
-          <h2 className="font-golos text-[20px] font-bold text-ink">
-            Регистър
-            <span className="ml-[10px] font-golos text-[14px] font-medium text-[#a1a1aa]">
-              {bookings.length} общо
-            </span>
-          </h2>
-
-          {sortedBookings.length === 0 ? (
-            <p className="mt-[16px] text-[14px] text-[#545454]">
-              Още няма направени резервации.
-            </p>
-          ) : (
-            <>
-              {/* Десктоп — таблица с обединени колони, за да се чете на един ред */}
-              <div className="mt-[16px] hidden overflow-x-auto lg:block">
-                <table className="w-full border-collapse text-left text-[13px]">
-                  <thead>
-                    <tr className="border-b border-[#eceae4] font-golos text-[11px] uppercase tracking-[0.6px] text-[#a1a1aa]">
-                      <th className="py-[10px] pr-[10px]">№</th>
-                      <th className="py-[10px] pr-[10px]">Кога</th>
-                      <th className="py-[10px] pr-[10px]">Места</th>
-                      <th className="py-[10px] pr-[10px]">Клиент</th>
-                      <th className="py-[10px] pr-[10px]">Контакт</th>
-                      <th className="py-[10px] pr-[10px]">Сума</th>
-                      <th className="py-[10px]" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sortedBookings.map((b) => {
-                      const isEditing = editingId === b.id && draft !== null;
-                      return (
-                        <tr
-                          key={b.id}
-                          className={`border-b border-[#eceae4] align-top text-ink ${
-                            isEditing ? "bg-[rgba(244,198,63,0.08)]" : ""
-                          }`}
-                        >
-                          <td className="py-[14px] pr-[10px]">
-                            <span className="block whitespace-nowrap font-golos font-medium text-forest">
-                              {b.id}
-                            </span>
-                            <span className="mt-[6px] block">
-                              {statusBadge(b)}
-                            </span>
-                          </td>
-                          <td className="py-[14px] pr-[10px]">
-                            {cellWhen(b, isEditing)}
-                          </td>
-                          <td className="py-[14px] pr-[10px]">
-                            {cellSeats(b, isEditing)}
-                          </td>
-                          <td className="py-[14px] pr-[10px]">
-                            {cellClient(b, isEditing)}
-                          </td>
-                          <td className="py-[14px] pr-[10px]">
-                            {cellContact(b, isEditing)}
-                          </td>
-                          <td className="py-[14px] pr-[10px]">
-                            {cellMoney(b, isEditing)}
-                          </td>
-                          <td className="py-[14px]">
-                            {cellActions(b, isEditing)}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Мобилно — по една карта на резервация */}
-              <div className="mt-[16px] flex flex-col gap-[12px] lg:hidden">
-                {sortedBookings.map((b) => {
-                  const isEditing = editingId === b.id && draft !== null;
-                  const rows = [
-                    { l: "Кога", v: cellWhen(b, isEditing) },
-                    { l: "Места", v: cellSeats(b, isEditing) },
-                    { l: "Клиент", v: cellClient(b, isEditing) },
-                    { l: "Контакт", v: cellContact(b, isEditing) },
-                    { l: "Сума", v: cellMoney(b, isEditing) },
-                  ];
-                  return (
-                    <div
-                      key={b.id}
-                      className={`rounded-[10px] border p-[14px] ${
-                        isEditing
-                          ? "border-sun bg-[rgba(244,198,63,0.08)]"
-                          : "border-[#e6e4de] bg-white"
-                      }`}
-                    >
-                      <div className="flex flex-wrap items-center justify-between gap-[8px]">
-                        <span className="font-golos text-[14px] font-semibold text-forest">
-                          {b.id}
-                        </span>
-                        {statusBadge(b)}
-                      </div>
-                      <div className="mt-[12px] flex flex-col gap-[10px]">
-                        {rows.map((row) => (
-                          <div key={row.l} className="flex flex-col gap-[3px]">
-                            <span className="font-golos text-[10.5px] font-semibold uppercase tracking-[1.1px] text-[#a1a1aa]">
-                              {row.l}
-                            </span>
-                            <div className="text-[13.5px] text-ink">{row.v}</div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-[14px]">{cellActions(b, isEditing)}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </section>
-          </>
-        )}
+        {/* Само календарният изглед и настройките, които бяха в него */}
+        <AdminCalendar />
+        <CategoriesSection />
+        <PricesSection />
+        <TicketDeliverySection />
       </main>
 
       {/* Попъп за потвърждение */}

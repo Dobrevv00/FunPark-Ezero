@@ -1,18 +1,27 @@
 /**
- * Локално хранилище за резервации и часови слотове (localStorage).
- * Временно решение до свързването с Payload CMS — тогава тези функции
- * ще бъдат заменени с API извиквания, без промяна по компонентите.
+ * Локално хранилище за резервации, сесии (часове), категории места и блокировки
+ * (localStorage). Временно решение до свързването с Payload CMS — тогава тези
+ * функции ще бъдат заменени с API извиквания, без промяна по компонентите.
+ *
+ * Няма зашити в кода часове и категории: всичко се създава от админ панела.
+ *  · Категории места → „fpe-categories“ (име, брой места, цена)
+ *  · Сесии с валидност „от – до“ → „fpe-schedules“
+ *  · Часове само за един ден → „fpe-day-slots“ (има предимство пред сесиите)
+ *  · Блокирани отделни места → „fpe-seat-blocks“
  */
 
-/** Брой места по вид седалка в една резервация */
-export type SeatCounts = { light: number; mid: number; heavy: number };
+/** Брой места по категория в една резервация: { "<id на категория>": брой } */
+export type SeatCounts = Record<string, number>;
+
+/** Идентификатор на категория място */
+export type SeatKey = string;
 
 export type BookingRecord = {
   id: string;
   dateKey: string; // "2026-08-20"
   dateLabel: string; // "20 август 2026"
   time: string;
-  seats: SeatCounts; // брой места по вид седалка
+  seats: SeatCounts; // брой места по категория
   places: number; // общо места (сумата от seats)
   name: string;
   phone: string;
@@ -22,34 +31,39 @@ export type BookingRecord = {
   confirmed?: boolean; // потвърдена от администратор — заключена за промяна/изтриване
   giftFor?: string; // „За:“ от персонализацията на стъпка „Плащане“
   giftMessage?: string; // персонализирано съобщение от стъпка „Плащане“
+  internal?: boolean; // лична/вътрешна резервация, направена от панела
 };
 
 /**
- * Видове седалки и наличност на сесия (общо 20 места на час).
- * Всеки вид се следи отделно — заета седалка от даден вид не е достъпна за
- * други за същия час.
+ * Категория места — редактира се от админ панела. Има име и цена; броят места
+ * се задава при добавяне на час (сесия, ден или конкретен час).
  */
-export const SEAT_TYPES = [
-  { key: "light", label: "До 30 кг", cap: 1 },
-  { key: "mid", label: "От 30 до 60 кг", cap: 14 },
-  { key: "heavy", label: "От 60 до 140 кг", cap: 5 },
-] as const;
-
-export type SeatKey = (typeof SEAT_TYPES)[number]["key"];
-
-/** Капацитети по подразбиране за всеки вид седалка */
-const DEFAULT_SEAT_CAPS: Record<SeatKey, number> = {
-  light: 1,
-  mid: 14,
-  heavy: 5,
+export type SeatCategory = {
+  id: string;
+  label: string;
+  /** Резервен брой места, ако за часа не е зададено нищо (по подразбиране 0) */
+  places: number;
+  /** Цена на място в евро */
+  price: number;
 };
 
-export const emptySeats = (): SeatCounts => ({ light: 0, mid: 0, heavy: 0 });
+/** Сесии (часове), валидни в период от дати. */
+export type SessionPlan = {
+  id: string;
+  /** Първи ден, в който важат тези часове ("2026-08-18") */
+  from: string;
+  /** Последен ден включително ("2026-08-30") */
+  to: string;
+  /** Часовете за всеки ден от периода ("HH:MM") */
+  times: string[];
+  /** Места по категории за тези часове — задават се заедно с часа */
+  caps?: SeatCounts;
+  createdAt: string;
+  note?: string;
+};
 
-export const seatsTotal = (s: SeatCounts) => s.light + s.mid + s.heavy;
-
-export const seatLabel = (key: string) =>
-  SEAT_TYPES.find((s) => s.key === key)?.label ?? key;
+/** Блокирани места по категория за дата/час */
+export type SeatBlocks = Record<string, { count: number; reason?: string }>;
 
 const BOOKINGS_KEY = "fpe-bookings";
 const SLOTS_KEY = "fpe-slots";
@@ -57,102 +71,273 @@ const DAY_SLOTS_KEY = "fpe-day-slots";
 const CAPACITY_KEY = "fpe-capacity";
 const BLOCKED_KEY = "fpe-blocked";
 const PRICES_KEY = "fpe-prices";
-
-/** Максимален брой резервации за един времеви слот */
-export const SLOT_CAPACITY = 20;
-
-/** Цени по подразбиране в евро според вида седалка */
-export const DEFAULT_SEAT_PRICES: Record<SeatKey, number> = {
-  light: 0, // До 30 кг — безплатно
-  mid: 16, // От 30 до 60 кг
-  heavy: 28, // От 60 до 140 кг
-};
-
-/** Такса за печатен билет по подразбиране (евро) */
-export const DEFAULT_PRINTED_FEE = 1.99;
+const CATEGORIES_KEY = "fpe-categories";
+const SCHEDULES_KEY = "fpe-schedules";
+const SEAT_BLOCKS_KEY = "fpe-seat-blocks";
 
 export const CURRENCY = "€";
 
-export type PriceSettings = Record<SeatKey, number> & { printedFee: number };
-
-const DEFAULT_PRICES: PriceSettings = {
-  ...DEFAULT_SEAT_PRICES,
-  printedFee: DEFAULT_PRINTED_FEE,
-};
+/**
+ * Такси според вида на билета. Начисляват се ЕДНОКРАТНО на резервация —
+ * билетът е един, независимо колко места са избрани.
+ * Категориите, часовете и местата остават без предварително зададени стойности.
+ */
+export const DEFAULT_PRINTED_FEE = 1.99;
+export const DEFAULT_DIGITAL_FEE = 0;
 
 /**
- * Цените се променят от админ панела и се пазят в localStorage.
- * При липса на записани цени важат тези по подразбиране.
+ * Няма предварително зададени категории — всички се създават от админ панела
+ * („Категории места“): име, брой места и цена. Докато няма нито една, клиентите
+ * не могат да избират места.
  */
-export function getPrices(): PriceSettings {
-  if (typeof window === "undefined") return { ...DEFAULT_PRICES };
+const INITIAL_CATEGORIES: SeatCategory[] = [];
+
+const emitChange = () => window.dispatchEvent(new Event("fpe-store-change"));
+
+const readJson = <T,>(key: string, fallback: T): T => {
+  if (typeof window === "undefined") return fallback;
   try {
-    const raw = JSON.parse(localStorage.getItem(PRICES_KEY) ?? "null");
-    if (!raw || typeof raw !== "object") return { ...DEFAULT_PRICES };
-    const out = { ...DEFAULT_PRICES };
-    for (const key of Object.keys(DEFAULT_PRICES) as (keyof PriceSettings)[]) {
-      const v = Number(raw[key]);
-      if (Number.isFinite(v) && v >= 0) out[key] = Math.round(v * 100) / 100;
-    }
-    return out;
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    const parsed = JSON.parse(raw);
+    return parsed === null ? fallback : (parsed as T);
   } catch {
-    return { ...DEFAULT_PRICES };
+    return fallback;
   }
+};
+
+const writeJson = (key: string, value: unknown) => {
+  localStorage.setItem(key, JSON.stringify(value));
+  emitChange();
+};
+
+/* ------------------------------------------------------- категории места */
+
+const isCategory = (v: unknown): v is SeatCategory =>
+  !!v &&
+  typeof v === "object" &&
+  typeof (v as SeatCategory).id === "string" &&
+  typeof (v as SeatCategory).label === "string";
+
+/**
+ * Категориите места. Ако още не са пипани, важат началните; изрично записан
+ * празен списък се уважава (тогава няма категории и резервация не може да се
+ * направи, докато не се създаде поне една).
+ */
+export function getCategories(): SeatCategory[] {
+  const raw = readJson<unknown>(CATEGORIES_KEY, null);
+  if (!Array.isArray(raw)) return INITIAL_CATEGORIES.map((c) => ({ ...c }));
+  return raw.filter(isCategory).map((c) => ({
+    id: c.id,
+    label: c.label,
+    places: Math.max(0, Math.round(Number(c.places) || 0)),
+    price: Math.max(0, Math.round((Number(c.price) || 0) * 100) / 100),
+  }));
 }
 
-export function setPrices(prices: PriceSettings) {
-  localStorage.setItem(PRICES_KEY, JSON.stringify(prices));
+export function setCategories(list: SeatCategory[]) {
+  writeJson(CATEGORIES_KEY, list);
+}
+
+/** Дали категориите вече са пипани от панела */
+export const hasCustomCategories = () =>
+  typeof window !== "undefined" && localStorage.getItem(CATEGORIES_KEY) !== null;
+
+/**
+ * Идентификаторът се пази само от латиница, цифри и тирета — така остава
+ * годен и за ключ в база данни, независимо какво е името на категорията.
+ */
+const slugId = (label: string) => {
+  const base = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return `${base || "cat"}-${Math.random().toString(36).slice(2, 7)}`;
+};
+
+/** Добавя нова категория. Връща я, или null при празно име. */
+export function addCategory(
+  label: string,
+  places: number,
+  price: number,
+): SeatCategory | null {
+  if (label.trim() === "") return null;
+  const cat: SeatCategory = {
+    id: slugId(label),
+    label: label.trim(),
+    places: Math.max(0, Math.round(places) || 0),
+    price: Math.max(0, Math.round((price || 0) * 100) / 100),
+  };
+  setCategories([...getCategories(), cat]);
+  return cat;
+}
+
+export function updateCategory(id: string, patch: Partial<Omit<SeatCategory, "id">>) {
+  setCategories(
+    getCategories().map((c) =>
+      c.id === id
+        ? {
+            ...c,
+            ...patch,
+            label: (patch.label ?? c.label).trim() || c.label,
+            places: Math.max(0, Math.round(patch.places ?? c.places) || 0),
+            price: Math.max(0, Math.round((patch.price ?? c.price) * 100) / 100),
+          }
+        : c,
+    ),
+  );
+}
+
+/**
+ * Изтрива категория. Вече направените резервации се запазват — местата им
+ * остават в записа и се показват с идентификатора си.
+ */
+export function removeCategory(id: string) {
+  setCategories(getCategories().filter((c) => c.id !== id));
+
+  // изчистваме зададените места и блокировки за тази категория
+  const caps = getCapacityOverrides();
+  for (const key of Object.keys(caps)) delete caps[key][id];
+  localStorage.setItem(CAPACITY_KEY, JSON.stringify(caps));
+
+  const blocks = getSeatBlockMap();
+  for (const key of Object.keys(blocks)) delete blocks[key][id];
+  localStorage.setItem(SEAT_BLOCKS_KEY, JSON.stringify(blocks));
+
   emitChange();
 }
 
-/** Връща цените към стойностите по подразбиране */
+/** Брой резервации, които ползват дадена категория — за предупреждение при изтриване */
+export function countBookingsWithCategory(id: string): number {
+  return getBookings().filter((b) => (b.seats?.[id] ?? 0) > 0).length;
+}
+
+/**
+ * Ключ за места, зададени без категория. Ползва се, когато администраторът
+ * задава общ брой места, преди да е създал категории — по-късно този брой се
+ * разпределя между тях.
+ */
+export const GENERAL_SEAT = "__general";
+
+export const categoryLabel = (id: string) =>
+  id === GENERAL_SEAT
+    ? "Общо (без категория)"
+    : (getCategories().find((c) => c.id === id)?.label ?? id);
+
+/** Съвместимост със стария код: етикет на категория */
+export const seatLabel = categoryLabel;
+
+export const emptySeats = (): SeatCounts =>
+  Object.fromEntries(getCategories().map((c) => [c.id, 0]));
+
+export const seatsTotal = (s: SeatCounts) =>
+  Object.values(s ?? {}).reduce((sum, n) => sum + (Number(n) || 0), 0);
+
+/* --------------------------------------------------------------- цени */
+
+export type PriceSettings = Record<string, number> & {
+  printedFee: number;
+  digitalFee: number;
+};
+
+/** Такси според вида на билета — по едно плащане на резервация. */
+export type DeliveryFees = { digitalFee: number; printedFee: number };
+
+const readFee = (v: unknown, fallback: number) => {
+  const n = Number(v);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) / 100 : fallback;
+};
+
+/** Цените идват от категориите; таксите за вида билет се пазят отделно. */
+export function getPrices(): PriceSettings {
+  const stored = readJson<Record<string, unknown>>(PRICES_KEY, {});
+  const out: PriceSettings = {
+    printedFee: readFee(stored?.printedFee, DEFAULT_PRINTED_FEE),
+    digitalFee: readFee(stored?.digitalFee, DEFAULT_DIGITAL_FEE),
+  };
+  // стари цени по категории, които вече не съществуват — за старите резервации
+  for (const [k, v] of Object.entries(stored ?? {})) {
+    const n = Number(v);
+    if (k !== "printedFee" && k !== "digitalFee" && Number.isFinite(n) && n >= 0) {
+      out[k] = n;
+    }
+  }
+  for (const c of getCategories()) out[c.id] = c.price;
+  return out;
+}
+
+/** Таксите за дигитален и печатен билет (еднократно на резервация) */
+export function getDeliveryFees(): DeliveryFees {
+  const p = getPrices();
+  return { digitalFee: p.digitalFee, printedFee: p.printedFee };
+}
+
+/** Записва само таксите за вида билет, без да пипа цените по категории */
+export function setDeliveryFees(fees: DeliveryFees) {
+  writeJson(PRICES_KEY, {
+    digitalFee: readFee(fees.digitalFee, DEFAULT_DIGITAL_FEE),
+    printedFee: readFee(fees.printedFee, DEFAULT_PRINTED_FEE),
+  });
+}
+
+/** Записва цените по категории; таксите остават както са. */
+export function setPrices(prices: PriceSettings) {
+  const cats = getCategories();
+  setCategories(
+    cats.map((c) =>
+      Number.isFinite(prices[c.id])
+        ? { ...c, price: Math.max(0, Math.round(prices[c.id] * 100) / 100) }
+        : c,
+    ),
+  );
+  const current = getDeliveryFees();
+  setDeliveryFees({
+    digitalFee: Number.isFinite(prices.digitalFee)
+      ? prices.digitalFee
+      : current.digitalFee,
+    printedFee: Number.isFinite(prices.printedFee)
+      ? prices.printedFee
+      : current.printedFee,
+  });
+}
+
+/** Връща таксата за печатен билет по подразбиране */
 export function resetPrices() {
   localStorage.removeItem(PRICES_KEY);
   emitChange();
 }
 
-/** Има ли записани (променени от админ) цени */
 export const hasCustomPrices = () =>
   typeof window !== "undefined" && localStorage.getItem(PRICES_KEY) !== null;
 
-/** Цена на един билет според вида седалка (по текущите настройки) */
-export const seatPrice = (key: SeatKey) => getPrices()[key];
+export const seatPrice = (key: SeatKey) => getPrices()[key] ?? 0;
 
-/** Такса за печатен билет (по текущите настройки) */
+/** Такса за печатен билет — еднократно за цялата резервация */
 export const printedFee = () => getPrices().printedFee;
 
-/** Обща сума в евро за избраните места по видове седалки */
+/** Такса за дигитален билет — еднократно за цялата резервация */
+export const digitalFee = () => getPrices().digitalFee;
+
+/** Обща сума в евро за избраните места */
 export const priceForSeats = (s: SeatCounts) => {
   const p = getPrices();
-  const sum = s.light * p.light + s.mid * p.mid + s.heavy * p.heavy;
+  const sum = Object.entries(s ?? {}).reduce(
+    (acc, [key, n]) => acc + (Number(n) || 0) * (p[key] ?? 0),
+    0,
+  );
   return Math.round(sum * 100) / 100;
 };
 
-export const defaultSlots = [
-  "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "13:00", "13:30",
-  "14:00", "14:30", "15:00", "15:30",
-  "16:00", "16:30", "17:00", "17:30",
-];
-
-const emitChange = () => window.dispatchEvent(new Event("fpe-store-change"));
+/* --------------------------------------------------------- резервации */
 
 export function getBookings(): BookingRecord[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = JSON.parse(localStorage.getItem(BOOKINGS_KEY) ?? "[]");
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
+  const raw = readJson<unknown>(BOOKINGS_KEY, []);
+  return Array.isArray(raw) ? (raw as BookingRecord[]) : [];
 }
 
 export function saveBooking(record: BookingRecord) {
-  localStorage.setItem(
-    BOOKINGS_KEY,
-    JSON.stringify([...getBookings(), record])
-  );
-  emitChange();
+  writeJson(BOOKINGS_KEY, [...getBookings(), record]);
 }
 
 /**
@@ -164,7 +349,7 @@ export function saveBooking(record: BookingRecord) {
  * Заменя се с транзакция/условен запис при свързване с Payload CMS.
  */
 export function tryBook(
-  record: BookingRecord
+  record: BookingRecord,
 ):
   | { ok: true }
   | { ok: false; reason: "full" | "blocked"; seat?: string; free: number } {
@@ -172,18 +357,17 @@ export function tryBook(
   if (isSlotBlocked(record.dateKey, record.time)) {
     return { ok: false, reason: "blocked", free: 0 };
   }
-  // проверка на всеки избран вид седалка поотделно
-  for (const st of SEAT_TYPES) {
-    const want = record.seats[st.key] ?? 0;
-    if (want <= 0) continue;
+  // проверка на всяка избрана категория поотделно (блокираните места вече са извадени)
+  for (const [key, want] of Object.entries(record.seats ?? {})) {
+    if (!want || want <= 0) continue;
     const free =
-      seatCapFor(record.dateKey, record.time, st.key) -
-      countSeat(fresh, record.dateKey, record.time, st.key);
+      seatCapFor(record.dateKey, record.time, key) -
+      countSeat(fresh, record.dateKey, record.time, key);
     if (want > free) {
-      return { ok: false, reason: "full", seat: st.key, free: Math.max(0, free) };
+      return { ok: false, reason: "full", seat: key, free: Math.max(0, free) };
     }
   }
-  // общ капацитет за часа (може да е ограничен от админа)
+  // общ капацитет за часа
   const totalFree =
     getCapacityFor(record.dateKey, record.time) -
     countBookings(fresh, record.dateKey, record.time);
@@ -196,89 +380,84 @@ export function tryBook(
 }
 
 export function updateBooking(record: BookingRecord) {
-  localStorage.setItem(
+  writeJson(
     BOOKINGS_KEY,
-    JSON.stringify(
-      // потвърдените резервации не се променят
-      getBookings().map((b) =>
-        b.id === record.id && !b.confirmed ? record : b
-      )
-    )
+    // потвърдените резервации не се променят
+    getBookings().map((b) => (b.id === record.id && !b.confirmed ? record : b)),
   );
-  emitChange();
 }
 
 export function deleteBooking(id: string) {
-  localStorage.setItem(
+  // потвърдените резервации не се изтриват
+  writeJson(
     BOOKINGS_KEY,
-    // потвърдените резервации не се изтриват (запазват се, ако id съвпада, но е потвърдена)
-    JSON.stringify(getBookings().filter((b) => b.id !== id || b.confirmed))
+    getBookings().filter((b) => b.id !== id || b.confirmed),
   );
-  emitChange();
 }
 
 /** Потвърждаване на резервация — след това е заключена за промяна/изтриване */
 export function confirmBooking(id: string) {
-  localStorage.setItem(
+  writeJson(
     BOOKINGS_KEY,
-    JSON.stringify(
-      getBookings().map((b) => (b.id === id ? { ...b, confirmed: true } : b))
-    )
+    getBookings().map((b) => (b.id === id ? { ...b, confirmed: true } : b)),
   );
-  emitChange();
 }
 
-export function getSlots(): string[] {
-  if (typeof window === "undefined") return defaultSlots;
-  try {
-    const raw = JSON.parse(localStorage.getItem(SLOTS_KEY) ?? "null");
-    return Array.isArray(raw) ? raw : defaultSlots;
-  } catch {
-    return defaultSlots;
-  }
-}
+/* ------------------------------------------------- часове (сесии) */
 
-export function setSlots(slots: string[]) {
-  localStorage.setItem(SLOTS_KEY, JSON.stringify(slots));
-  emitChange();
-}
-
-/** Допустим диапазон за нови часове (работно време) */
-export const SLOT_RANGE = { min: "09:00", max: "17:30" } as const;
-
-/** Валиден ли е часът във формат "HH:MM" (00:00 – 23:59) */
+/** Валиден ли е часът във формат "HH:MM" (00:00 – 23:59). Без ограничение в диапазон. */
 export const isValidSlot = (time: string) =>
   /^([01]\d|2[0-3]):[0-5]\d$/.test(time);
 
-/** В работния диапазон ли е часът (09:00 – 17:30) */
-export const isSlotInRange = (time: string) =>
-  isValidSlot(time) && time >= SLOT_RANGE.min && time <= SLOT_RANGE.max;
+const sortTimes = (times: string[]) =>
+  [...new Set(times.filter(isValidSlot))].sort();
 
-/** Добавя нов час; часовете се пазят сортирани. Връща false при невалиден/съществуващ. */
+/**
+ * Резервни („стандартни“) часове — важат за дни, които не попадат в никоя
+ * сесия. По подразбиране е празно: няма предварително зададени часове.
+ */
+export function getSlots(): string[] {
+  const raw = readJson<unknown>(SLOTS_KEY, []);
+  return Array.isArray(raw) ? sortTimes(raw as string[]) : [];
+}
+
+export function setSlots(slots: string[]) {
+  writeJson(SLOTS_KEY, sortTimes(slots));
+}
+
+/** Добавя стандартен час. Връща false при невалиден или съществуващ. */
 export function addSlot(time: string): boolean {
-  if (!isSlotInRange(time)) return false;
+  if (!isValidSlot(time)) return false;
   const slots = getSlots();
   if (slots.includes(time)) return false;
-  setSlots([...slots, time].sort());
+  setSlots([...slots, time]);
   return true;
 }
 
 /**
- * Премахва час от списъка. Резервациите за този час се запазват — те остават
- * видими в регистъра и в деня си, но часът вече не може да се избира.
- * Заедно с часа отпадат и блокировките/капацитетите, зададени само за него.
+ * Премахва стандартен час. Резервациите за него се запазват — остават видими
+ * в регистъра, но часът вече не може да се избира. Отпадат и блокировките и
+ * зададените места само за него.
  */
 export function removeSlot(time: string) {
   setSlots(getSlots().filter((t) => t !== time));
+  dropSlotSettings(`|${time}`);
+}
 
-  const blocked = getBlocked().filter((k) => !k.endsWith(`|${time}`));
-  localStorage.setItem(BLOCKED_KEY, JSON.stringify(blocked));
+/** Изчиства блокировки/места/блокирани места за ключове, завършващи на даден час */
+function dropSlotSettings(suffix: string) {
+  localStorage.setItem(
+    BLOCKED_KEY,
+    JSON.stringify(getBlocked().filter((k) => !k.endsWith(suffix))),
+  );
 
-  const overrides = getCapacityOverrides();
-  for (const key of Object.keys(overrides)) {
-    if (key.endsWith(`|${time}`)) delete overrides[key];
-  }
-  localStorage.setItem(CAPACITY_KEY, JSON.stringify(overrides));
+  const caps = getCapacityOverrides();
+  for (const key of Object.keys(caps)) if (key.endsWith(suffix)) delete caps[key];
+  localStorage.setItem(CAPACITY_KEY, JSON.stringify(caps));
+
+  const blocks = getSeatBlockMap();
+  for (const key of Object.keys(blocks)) if (key.endsWith(suffix)) delete blocks[key];
+  localStorage.setItem(SEAT_BLOCKS_KEY, JSON.stringify(blocks));
 
   emitChange();
 }
@@ -288,27 +467,129 @@ export function countBookingsAtTime(time: string): number {
   return getBookings().filter((b) => b.time === time).length;
 }
 
+/* ------------------------------------------- сесии с валидност „от – до“ */
+
+const isPlan = (v: unknown): v is SessionPlan =>
+  !!v &&
+  typeof v === "object" &&
+  typeof (v as SessionPlan).id === "string" &&
+  typeof (v as SessionPlan).from === "string" &&
+  typeof (v as SessionPlan).to === "string" &&
+  Array.isArray((v as SessionPlan).times);
+
+export function getSchedules(): SessionPlan[] {
+  const raw = readJson<unknown>(SCHEDULES_KEY, []);
+  if (!Array.isArray(raw)) return [];
+  return raw.filter(isPlan).map((p) => ({
+    ...p,
+    times: sortTimes(p.times),
+    createdAt: p.createdAt ?? "",
+  }));
+}
+
+export function setSchedules(list: SessionPlan[]) {
+  writeJson(SCHEDULES_KEY, list);
+}
+
+const isDateKey = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v);
+
 /**
- * Часове за конкретен ден.
- * Ако за деня са зададени индивидуални часове, важат само те; иначе се
- * използват стандартните (общите) часове. Промяна на часовете за един ден
- * не влияе на останалите дни.
+ * Създава сесия: часове, които важат всеки ден от „from“ до „to“ включително.
+ * Връща null при невалидни дати или без нито един валиден час.
  */
+export function addSchedule(input: {
+  from: string;
+  to: string;
+  times: string[];
+  caps?: SeatCounts;
+  note?: string;
+}): SessionPlan | null {
+  const times = sortTimes(input.times);
+  if (!isDateKey(input.from) || !isDateKey(input.to)) return null;
+  if (input.to < input.from) return null;
+  if (times.length === 0) return null;
+
+  const plan: SessionPlan = {
+    id: `plan-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    from: input.from,
+    to: input.to,
+    times,
+    caps: input.caps,
+    note: input.note?.trim() || undefined,
+    createdAt: new Date().toISOString(),
+  };
+  setSchedules([...getSchedules(), plan]);
+  return plan;
+}
+
+export function updateSchedule(
+  id: string,
+  patch: Partial<Pick<SessionPlan, "from" | "to" | "times" | "caps" | "note">>,
+) {
+  setSchedules(
+    getSchedules().map((p) =>
+      p.id === id
+        ? {
+            ...p,
+            ...patch,
+            times: patch.times ? sortTimes(patch.times) : p.times,
+          }
+        : p,
+    ),
+  );
+}
+
+export function removeSchedule(id: string) {
+  setSchedules(getSchedules().filter((p) => p.id !== id));
+}
+
+/** Всички сесии, които покриват дадения ден (най-новото правило е първо) */
+export function schedulesForDay(dateKey: string): SessionPlan[] {
+  return getSchedules()
+    .filter((p) => dateKey >= p.from && dateKey <= p.to)
+    .sort((a, b) =>
+      a.from === b.from
+        ? (b.createdAt ?? "").localeCompare(a.createdAt ?? "")
+        : b.from.localeCompare(a.from),
+    );
+}
+
+/**
+ * Часове за конкретен ден. Ред на предимство:
+ *  1. часове, зададени само за този ден;
+ *  2. сесията, която покрива деня (при няколко важи тази с по-късно начало —
+ *     така промяна след определена дата измества старото разписание);
+ *  3. стандартните часове.
+ */
+export function getSlotsForDay(dateKey: string): string[] {
+  const own = getDaySlotOverrides()[dateKey];
+  // изрично зададен списък важи, дори когато е празен (ден без часове)
+  if (own) return sortTimes(own);
+  const plan = schedulesForDay(dateKey)[0];
+  if (plan) return plan.times;
+  return getSlots();
+}
+
+/** Кое правило дава часовете на този ден — за показване в панела */
+export function slotsSourceForDay(
+  dateKey: string,
+): { source: "day"; plan?: undefined } | { source: "plan"; plan: SessionPlan } | { source: "standard" } {
+  if (getDaySlotOverrides()[dateKey]) return { source: "day" };
+  const plan = schedulesForDay(dateKey)[0];
+  return plan ? { source: "plan", plan } : { source: "standard" };
+}
+
+/* --------------------------------------------- часове само за един ден */
+
 export function getDaySlotOverrides(): Record<string, string[]> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = JSON.parse(localStorage.getItem(DAY_SLOTS_KEY) ?? "{}");
-    if (!raw || typeof raw !== "object") return {};
-    const out: Record<string, string[]> = {};
-    for (const [k, v] of Object.entries(raw)) {
-      if (Array.isArray(v) && v.every((t) => typeof t === "string")) {
-        out[k] = v as string[];
-      }
+  const raw = readJson<Record<string, unknown>>(DAY_SLOTS_KEY, {});
+  const out: Record<string, string[]> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) {
+    if (Array.isArray(v) && v.every((t) => typeof t === "string")) {
+      out[k] = v as string[];
     }
-    return out;
-  } catch {
-    return {};
   }
+  return out;
 }
 
 /** Има ли денят собствен списък с часове */
@@ -316,54 +597,51 @@ export function hasDaySlots(dateKey: string): boolean {
   return dateKey in getDaySlotOverrides();
 }
 
-/** Часовете, валидни за конкретен ден */
-export function getSlotsForDay(dateKey: string): string[] {
-  const o = getDaySlotOverrides();
-  return o[dateKey] ? [...o[dateKey]].sort() : getSlots();
-}
-
 function saveDaySlots(dateKey: string, slots: string[]) {
   const o = getDaySlotOverrides();
-  o[dateKey] = [...slots].sort();
-  localStorage.setItem(DAY_SLOTS_KEY, JSON.stringify(o));
-  emitChange();
+  o[dateKey] = sortTimes(slots);
+  writeJson(DAY_SLOTS_KEY, o);
 }
 
 /** Добавя час само за този ден */
 export function addSlotForDay(dateKey: string, time: string): boolean {
-  if (!isSlotInRange(time)) return false;
+  if (!isValidSlot(time)) return false;
   const current = getSlotsForDay(dateKey);
   if (current.includes(time)) return false;
   saveDaySlots(dateKey, [...current, time]);
   return true;
 }
 
-/** Премахва час само за този ден (заедно с блокировката и местата за него) */
+/** Премахва час само за този ден (заедно с блокировките и местата за него) */
 export function removeSlotForDay(dateKey: string, time: string) {
-  const current = getSlotsForDay(dateKey);
   saveDaySlots(
     dateKey,
-    current.filter((t) => t !== time)
+    getSlotsForDay(dateKey).filter((t) => t !== time),
   );
 
   const slotKey = `${dateKey}|${time}`;
 
-  const blocked = getBlocked().filter((k) => k !== slotKey);
-  localStorage.setItem(BLOCKED_KEY, JSON.stringify(blocked));
+  localStorage.setItem(
+    BLOCKED_KEY,
+    JSON.stringify(getBlocked().filter((k) => k !== slotKey)),
+  );
 
-  const overrides = getCapacityOverrides();
-  delete overrides[slotKey];
-  localStorage.setItem(CAPACITY_KEY, JSON.stringify(overrides));
+  const caps = getCapacityOverrides();
+  delete caps[slotKey];
+  localStorage.setItem(CAPACITY_KEY, JSON.stringify(caps));
+
+  const blocks = getSeatBlockMap();
+  delete blocks[slotKey];
+  localStorage.setItem(SEAT_BLOCKS_KEY, JSON.stringify(blocks));
 
   emitChange();
 }
 
-/** Връща деня към стандартните часове */
+/** Връща деня към часовете от сесията/стандартните */
 export function resetDaySlots(dateKey: string) {
   const o = getDaySlotOverrides();
   delete o[dateKey];
-  localStorage.setItem(DAY_SLOTS_KEY, JSON.stringify(o));
-  emitChange();
+  writeJson(DAY_SLOTS_KEY, o);
 }
 
 /** Брой резервации за конкретен ден и час */
@@ -372,93 +650,176 @@ export function countBookingsAtDayTime(dateKey: string, time: string): number {
     .length;
 }
 
-/**
- * Персонализиран капацитет по видове седалки.
- * Ключ за цял ден: "2026-08-15" → брой места по вид за всеки час този ден.
- * Ключ за конкретен час: "2026-08-15|14:00" → само за този час (има предимство).
- * Общият капацитет на часа е сборът от трите вида.
- */
-const isSeatCounts = (v: unknown): v is SeatCounts =>
-  !!v &&
-  typeof v === "object" &&
-  Number.isFinite((v as SeatCounts).light) &&
-  Number.isFinite((v as SeatCounts).mid) &&
-  Number.isFinite((v as SeatCounts).heavy);
+/* ------------------------------------------------------- места (капацитет) */
 
+/**
+ * Зададени места по категории.
+ * Ключ за цял ден: "2026-08-15" → важи за всеки час този ден.
+ * Ключ за конкретен час: "2026-08-15|14:00" → само за него (има предимство).
+ * Без зададена стойност важат местата от самата категория.
+ */
 export function getCapacityOverrides(): Record<string, SeatCounts> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = JSON.parse(localStorage.getItem(CAPACITY_KEY) ?? "{}");
-    if (!raw || typeof raw !== "object") return {};
-    // пропускаме стари/невалидни записи (напр. от предишен формат с число)
-    const out: Record<string, SeatCounts> = {};
-    for (const [k, v] of Object.entries(raw)) {
-      if (isSeatCounts(v)) out[k] = v as SeatCounts;
+  const raw = readJson<Record<string, unknown>>(CAPACITY_KEY, {});
+  const out: Record<string, SeatCounts> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) {
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      const counts: SeatCounts = {};
+      for (const [key, n] of Object.entries(v as Record<string, unknown>)) {
+        const num = Number(n);
+        if (Number.isFinite(num)) counts[key] = Math.max(0, Math.round(num));
+      }
+      out[k] = counts;
     }
-    return out;
-  } catch {
-    return {};
   }
+  return out;
 }
 
 export const capacityKey = (dateKey: string, time?: string | null) =>
   time ? `${dateKey}|${time}` : dateKey;
 
-/** Места по видове седалки за дата+час — часов override › дневен override › по подразбиране */
+/** Местата по подразбиране — от категориите */
+export const defaultSeatCaps = (): SeatCounts =>
+  Object.fromEntries(getCategories().map((c) => [c.id, c.places]));
+
+/**
+ * Места по категории за дата+час, БЕЗ да се вадят блокираните.
+ * Ред: зададени за часа › зададени за деня › местата от сесията, която покрива
+ * деня (задават се заедно с часовете) › местата от категориите.
+ */
 export function getSeatCapsFor(
   dateKey: string,
-  time?: string | null
+  time?: string | null,
 ): SeatCounts {
   const o = getCapacityOverrides();
-  if (time && o[`${dateKey}|${time}`]) return o[`${dateKey}|${time}`];
-  if (o[dateKey]) return o[dateKey];
-  return { ...DEFAULT_SEAT_CAPS };
+  const base = defaultSeatCaps();
+  const planCaps = schedulesForDay(dateKey)[0]?.caps;
+  const override =
+    (time ? o[`${dateKey}|${time}`] : undefined) ?? o[dateKey] ?? planCaps ?? null;
+  if (!override) return base;
+  // зададените стойности допълват категориите (нова категория взима своята стойност)
+  return { ...base, ...override };
 }
 
-/** Капацитет на конкретен вид седалка за дата+час */
+/** Места по категории за дата+час, след като се извадят блокираните */
+export function getEffectiveSeatCaps(
+  dateKey: string,
+  time?: string | null,
+): SeatCounts {
+  const caps = getSeatCapsFor(dateKey, time);
+  const blocks = getSeatBlocks(dateKey, time ?? null);
+  const out: SeatCounts = {};
+  for (const [key, n] of Object.entries(caps)) {
+    out[key] = Math.max(0, n - (blocks[key]?.count ?? 0));
+  }
+  return out;
+}
+
+/** Свободни места за категория (без блокираните) — това ползва резервацията */
 export function seatCapFor(
   dateKey: string,
   time: string | null,
-  key: SeatKey
+  key: SeatKey,
 ): number {
-  return getSeatCapsFor(dateKey, time)[key] ?? 0;
+  return getEffectiveSeatCaps(dateKey, time)[key] ?? 0;
 }
 
-/** Общ капацитет за дата+час = сборът от трите вида места */
+/** Общо места за дата+час (без блокираните) */
 export function getCapacityFor(dateKey: string, time?: string | null): number {
-  return seatsTotal(getSeatCapsFor(dateKey, time));
+  return seatsTotal(getEffectiveSeatCaps(dateKey, time));
 }
 
 export function setCapacityFor(
   dateKey: string,
   time: string | null,
-  seats: SeatCounts
+  seats: SeatCounts,
 ) {
   const overrides = getCapacityOverrides();
   overrides[capacityKey(dateKey, time)] = seats;
-  localStorage.setItem(CAPACITY_KEY, JSON.stringify(overrides));
-  emitChange();
+  writeJson(CAPACITY_KEY, overrides);
 }
 
 export function removeCapacityOverride(key: string) {
   const overrides = getCapacityOverrides();
   delete overrides[key];
-  localStorage.setItem(CAPACITY_KEY, JSON.stringify(overrides));
-  emitChange();
+  writeJson(CAPACITY_KEY, overrides);
 }
+
+/* ------------------------------------------------- блокирани отделни места */
+
+export function getSeatBlockMap(): Record<string, SeatBlocks> {
+  const raw = readJson<Record<string, unknown>>(SEAT_BLOCKS_KEY, {});
+  const out: Record<string, SeatBlocks> = {};
+  for (const [k, v] of Object.entries(raw ?? {})) {
+    if (!v || typeof v !== "object" || Array.isArray(v)) continue;
+    const entry: SeatBlocks = {};
+    for (const [key, val] of Object.entries(v as Record<string, unknown>)) {
+      const count = Math.max(0, Math.round(Number((val as { count?: unknown })?.count) || 0));
+      if (count > 0) {
+        const reason = (val as { reason?: unknown })?.reason;
+        entry[key] = {
+          count,
+          reason: typeof reason === "string" && reason.trim() ? reason : undefined,
+        };
+      }
+    }
+    if (Object.keys(entry).length > 0) out[k] = entry;
+  }
+  return out;
+}
+
+/**
+ * Блокирани места за дата+час. Часовият запис има предимство пред дневния;
+ * ако за часа няма нищо, важи блокировката за целия ден.
+ */
+export function getSeatBlocks(dateKey: string, time?: string | null): SeatBlocks {
+  const map = getSeatBlockMap();
+  if (time && map[`${dateKey}|${time}`]) return map[`${dateKey}|${time}`];
+  return map[dateKey] ?? {};
+}
+
+/** Общо блокирани места за дата+час */
+export const blockedSeatsTotal = (dateKey: string, time?: string | null) =>
+  Object.values(getSeatBlocks(dateKey, time)).reduce((s, b) => s + b.count, 0);
+
+/**
+ * Блокира (или отблокира при count = 0) места от една категория.
+ * Блокираните места изчезват от наличността на сайта, но остават видими в
+ * панела заедно с причината — например лична резервация.
+ */
+export function setSeatBlock(
+  dateKey: string,
+  time: string | null,
+  key: SeatKey,
+  count: number,
+  reason?: string,
+) {
+  const map = getSeatBlockMap();
+  const mapKey = capacityKey(dateKey, time);
+  const entry = { ...(map[mapKey] ?? {}) };
+  const n = Math.max(0, Math.round(count) || 0);
+  if (n === 0) delete entry[key];
+  else entry[key] = { count: n, reason: reason?.trim() || undefined };
+  if (Object.keys(entry).length === 0) delete map[mapKey];
+  else map[mapKey] = entry;
+  writeJson(SEAT_BLOCKS_KEY, map);
+}
+
+/** Изчиства всички блокирани места за дата (и час, ако е подаден) */
+export function clearSeatBlocks(dateKey: string, time?: string | null) {
+  const map = getSeatBlockMap();
+  delete map[capacityKey(dateKey, time ?? null)];
+  writeJson(SEAT_BLOCKS_KEY, map);
+}
+
+/* ------------------------------------------ блокирани дати и цели часове */
 
 /**
  * Блокирани дати/часове (неактивни в резервацията).
  * Ключ за цял ден: "2026-08-15". Ключ за конкретен час: "2026-08-15|14:00".
  */
 export function getBlocked(): string[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = JSON.parse(localStorage.getItem(BLOCKED_KEY) ?? "[]");
-    return Array.isArray(raw) ? raw : [];
-  } catch {
-    return [];
-  }
+  const raw = readJson<unknown>(BLOCKED_KEY, []);
+  return Array.isArray(raw) ? (raw as string[]) : [];
 }
 
 /** Множество от блокирани цели дни (без часовите ключове) */
@@ -478,41 +839,39 @@ export function isSlotBlocked(dateKey: string, time: string): boolean {
 
 export function addBlock(key: string) {
   const b = getBlocked();
-  if (!b.includes(key)) {
-    localStorage.setItem(BLOCKED_KEY, JSON.stringify([...b, key]));
-    emitChange();
-  }
+  if (!b.includes(key)) writeJson(BLOCKED_KEY, [...b, key]);
 }
 
 export function removeBlock(key: string) {
-  localStorage.setItem(
+  writeJson(
     BLOCKED_KEY,
-    JSON.stringify(getBlocked().filter((k) => k !== key))
+    getBlocked().filter((k) => k !== key),
   );
-  emitChange();
 }
+
+/* ----------------------------------------------------------- броене */
 
 /** Сумата от заетите места за дата+час (стари записи без places броят по 1) */
 export function countBookings(
   bookings: BookingRecord[],
   dateKey: string,
-  time: string
+  time: string,
 ) {
   return bookings
     .filter((b) => b.dateKey === dateKey && b.time === time)
     .reduce((sum, b) => sum + (b.places ?? 1), 0);
 }
 
-/** Заетите места за конкретен вид седалка за дата+час */
+/** Заетите места за конкретна категория за дата+час */
 export function countSeat(
   bookings: BookingRecord[],
   dateKey: string,
   time: string,
-  seatType: string
+  seatType: string,
 ) {
   return bookings
     .filter((b) => b.dateKey === dateKey && b.time === time)
-    .reduce((sum, b) => sum + (b.seats?.[seatType as SeatKey] ?? 0), 0);
+    .reduce((sum, b) => sum + (b.seats?.[seatType] ?? 0), 0);
 }
 
 /** Абонамент за промени (вкл. от други табове) */
