@@ -21,7 +21,7 @@ import type { SiteSetting } from "@/payload-types";
  * Ключът на режима. Изключване: смени на false, commit и push към main —
  * Vercel деплойва сам (~минута) и сайтът се показва нормално.
  */
-export const COMING_SOON_MODE = false;
+export const COMING_SOON_MODE = true;
 
 /**
  * Дали екранът да се покаже. Едно място за всички страници.
