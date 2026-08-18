@@ -114,6 +114,13 @@ const socials = [
     className: "h-[22px] w-[22px]",
     href: "https://www.instagram.com/fun_park_ezero/",
   },
+  {
+    // ширината пази пропорцията на иконата (12.78 : 14.43)
+    src: "/icons/tiktok-light.svg",
+    alt: "TikTok",
+    className: "h-[22px] w-[19.5px]",
+    href: "https://www.tiktok.com/@fun_park_ezero",
+  },
 ];
 
 function Socials({ className = "", items = socials }: { className?: string; items?: typeof socials }) {
