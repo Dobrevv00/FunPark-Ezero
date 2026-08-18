@@ -44,10 +44,7 @@ import {
 import { ADMIN_PASS, ADMIN_USER, AUTH_KEY, isAdminAuthed } from "@/lib/adminAuth";
 import { Logo } from "@/components/Logo";
 import AdminCalendar from "@/components/AdminCalendar";
-import {
-  CategoriesSection,
-  TicketDeliverySection,
-} from "@/components/AdminSetup";
+import { CategoriesSection } from "@/components/AdminSetup";
 import { monthNamesLower } from "@/components/calendarData";
 
 /** Обобщение на билетите по категории, напр. „1 × До 30 кг · 2 × От 30 до 60 кг“ */
@@ -165,8 +162,7 @@ function PricesSection() {
       <p className="mt-[4px] text-[13px] text-[#545454]">
         Цена на едно място за всяка категория, която сте създали. Новите цени
         важат веднага за всички нови резервации. Стойност 0 означава безплатно.
-        Приемат се и стотинки (напр. 1,99). Таксата според вида на билета се
-        задава в секция „Вид на билета“ по-долу.
+        Приемат се и стотинки (напр. 1,99).
       </p>
 
       {cats.length === 0 && (
@@ -1138,7 +1134,6 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <AdminCalendar />
         <CategoriesSection />
         <PricesSection />
-        <TicketDeliverySection />
       </main>
 
       {/* Попъп за потвърждение */}

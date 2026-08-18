@@ -17,9 +17,7 @@ import {
 } from "./calendarData";
 import {
   CURRENCY,
-  digitalFee,
   priceForSeats,
-  printedFee,
   seatPrice,
   countBookings,
   countSeat,
@@ -73,21 +71,101 @@ const progressWidths = ["20%", "40%", "60%", "80%", "96%"];
 const fmtPrice = (n: number) =>
   Number.isInteger(n) ? String(n) : n.toFixed(2).replace(".", ",");
 
-/** Вид на билета (както двете версии в референтния дизайн) */
-const deliveryOptions = [
-  {
-    key: "digital",
-    title: "ДИГИТАЛЕН БИЛЕТ",
-    hint: "Изпраща се веднага по имейл",
-  },
-  {
-    key: "printed",
-    title: "ПЕЧАТЕН БИЛЕТ",
-    hint: "Разпечатваме го на касата при пристигане",
-  },
-] as const;
+/**
+ * Сваля билета като Word документ (.doc).
+ *
+ * Файлът е Word-съвместим HTML — Word го отваря и запазва форматирането, без
+ * да е нужна външна библиотека. Работи и на десктоп, и на телефон.
+ */
+const downloadTicketDoc = (ticket: {
+  reservationNo: string;
+  dateLabel: string;
+  time: string;
+  seats: string;
+  places: number;
+  total: string;
+  name: string;
+  phone: string;
+  email: string;
+  giftFor?: string;
+  giftMessage?: string;
+}) => {
+  const esc = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const row = (label: string, value: string) =>
+    value.trim()
+      ? `<tr><th>${esc(label)}</th><td>${esc(value)}</td></tr>`
+      : "";
 
-type DeliveryKey = (typeof deliveryOptions)[number]["key"];
+  const html = `<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40" lang="bg"><head>
+<meta charset="utf-8">
+<meta name="ProgId" content="Word.Document">
+<title>Билет ${esc(ticket.reservationNo)} — Fun Park Ezero</title>
+<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]-->
+<style>
+  @page { size: A4; margin: 2cm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 32px; font-family: system-ui, "Segoe UI", Arial, sans-serif; color: #18181b; }
+  .card { max-width: 640px; margin: 0 auto; border: 2px solid #13362f; border-radius: 14px; padding: 28px; }
+  .brand { font-size: 22px; font-weight: 800; color: #13362f; letter-spacing: -0.3px; }
+  .sub { margin-top: 4px; font-size: 13px; color: #545454; }
+  h1 { margin: 22px 0 4px; font-size: 19px; }
+  .no { display: inline-block; margin-top: 6px; border-radius: 8px; background: #f4c63f; padding: 6px 12px; font-size: 15px; font-weight: 700; }
+  table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+  th, td { border-top: 1px solid #e6e4de; padding: 10px 0; font-size: 14px; text-align: left; vertical-align: top; }
+  th { width: 42%; font-weight: 600; color: #545454; }
+  td { font-weight: 600; }
+  .total td, .total th { font-size: 16px; color: #13362f; }
+  .note { margin-top: 22px; border-radius: 10px; background: rgba(106,142,78,0.12); padding: 12px 14px; font-size: 13px; line-height: 1.5; color: #3f3f46; }
+  @media print { body { padding: 0; } .card { border-width: 1px; } }
+</style></head><body>
+<div class="card">
+  <div class="brand">Fun Park Ezero</div>
+  <div class="sub">ул. „Димитър Димов“, 8000 Бургас</div>
+  <h1>Билет за резервация</h1>
+  <div class="no">№ ${esc(ticket.reservationNo)}</div>
+  <table>
+    ${row("Дата", ticket.dateLabel)}
+    ${row("Час", `${ticket.time} ч`)}
+    ${row("Места", `${ticket.seats} (общо ${ticket.places})`)}
+    ${row("Име", ticket.name)}
+    ${row("Телефон", ticket.phone)}
+    ${row("Имейл", ticket.email)}
+    ${row("За", ticket.giftFor ?? "")}
+    ${row("Съобщение", ticket.giftMessage ?? "")}
+    <tr class="total"><th>Общо</th><td>${esc(ticket.total)}</td></tr>
+  </table>
+  <div class="note">Плащането се извършва на място при пристигане. Моля, покажете този билет или номера на резервацията на касата.</div>
+</div>
+</body></html>`;
+
+  // BOM-ът гарантира, че Word чете кирилицата правилно
+  const blob = new Blob(["﻿", html], {
+    type: "application/msword;charset=utf-8",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Bilet-${ticket.reservationNo}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+};
+
+/**
+ * Текстът за потвърждение преди резервацията да бъде записана.
+ * Сменя се само тук — това е единственото място, където се задава.
+ */
+const CONFIRM_TEXT = {
+  title: "Потвърждавате ли резервацията?",
+  body:
+    "Проверете датата, часа и броя места. Плащането се извършва на място " +
+    "при пристигане. Ако не можете да дойдете, моля свържете се с нас " +
+    "предварително.",
+  cancel: "Върни се",
+  confirm: "Да, потвърждавам",
+};
 
 /** Галерия за екрана на плащане — снимки от сайта */
 const galleryMain = "/images/why-park.jpg";
@@ -104,8 +182,6 @@ const galleryAll = [
   ...galleryThumbs.map((t) => ({ src: t.src, alt: "Fun Park Ezero" })),
 ];
 
-/** Приети начини на плащане (текстови значки — без външни лога) */
-const payBrands = ["Apple Pay", "Google Pay", "Visa", "Mastercard", "Amex"];
 
 function Legend({ items }: { items: { icon: string; label: string }[] }) {
   return (
@@ -153,6 +229,8 @@ function Modal({
   });
   const [seatQty, setSeatQty] = useState<SeatCounts>(emptySeats);
   const [availabilityError, setAvailabilityError] = useState("");
+  /** Диалог за потвърждение преди записване на резервацията */
+  const [confirmOpen, setConfirmOpen] = useState(false);
   // категориите места се управляват от админ панела, затова се четат от хранилището
   const [categories, setCategories] = useState<SeatCategory[]>([]);
 
@@ -290,7 +368,6 @@ function Modal({
   };
   const [form, setForm] = useState({ name: "", phone: "", email: "" });
   const [consent, setConsent] = useState(true);
-  const [delivery, setDelivery] = useState<DeliveryKey>("digital");
   const [giftFor, setGiftFor] = useState("");
   const [giftMessage, setGiftMessage] = useState("");
   /** индекс на снимката, отворена в голям формат (null = затворена галерия) */
@@ -333,11 +410,8 @@ function Modal({
   // сумата се формира от избраните седалки (цена според вида)
   const totalPrice = priceForSeats(seatQty);
 
-  // печатният билет добавя такса към сумата за плащане (цените се задават в админ панела)
-  const printedTicketFee = printedFee();
-  // таксата е за целия билет — начислява се веднъж, независимо от броя места
-  const deliveryFee = delivery === "printed" ? printedTicketFee : digitalFee();
-  const totalDue = totalPrice + deliveryFee;
+  // няма такси според вида на билета — плаща се само за местата
+  const totalDue = totalPrice;
 
   const canProceed =
     step === 1
@@ -357,7 +431,7 @@ function Modal({
               isValidBgPhone(form.phone) &&
               isValidEmail(form.email) &&
               consent
-            : delivery !== undefined; // стъпка 5 — версията на билета е винаги избрана
+            : true; // стъпка 5 — плащане, няма какво да се избира
 
   const reservationNo = useMemo(
     () => `FPE-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -977,86 +1051,28 @@ function Modal({
                   </div>
                 </div>
 
-                {/* Две версии на билета */}
-                <div className="mt-[16px] grid grid-cols-2 gap-[14px]">
-                  {deliveryOptions.map((d) => {
-                    const active = delivery === d.key;
-                    // цената на печатния билет идва от настройките в админ панела
-                    const optionPrice =
-                      d.key === "printed" && printedTicketFee > 0
-                        ? `+${fmtPrice(printedTicketFee)} ${CURRENCY}`
-                        : "БЕЗПЛАТНО";
-                    return (
-                      <button
-                        key={d.key}
-                        type="button"
-                        onClick={() => setDelivery(d.key)}
-                        className={`flex cursor-pointer flex-col gap-[7px] rounded-[12px] border p-[14px] text-left transition-colors ${
-                          active
-                            ? "border-forest bg-[rgba(23,87,59,0.06)]"
-                            : "border-[#dddad2] hover:border-forest"
-                        }`}
-                      >
-                        <span className="flex items-start gap-[9px]">
-                          <span
-                            className={`mt-[1px] flex size-[17px] shrink-0 items-center justify-center rounded-full border-[2px] ${
-                              active ? "border-forest" : "border-[#c9c6bd]"
-                            }`}
-                          >
-                            {active && (
-                              <span className="size-[8px] rounded-full bg-forest" />
-                            )}
-                          </span>
-                          <span className="font-golos text-[12.5px] font-bold uppercase leading-[1.25] tracking-[0.4px] text-ink">
-                            {d.title}
-                          </span>
-                        </span>
-                        <span className="font-golos text-[12px] font-bold uppercase tracking-[0.5px] text-forest">
-                          {optionPrice}
-                        </span>
-                        <span className="font-golos text-[12px] leading-[1.4] text-[#a1a1aa]">
-                          {d.hint}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
 
-                {/* Голям бутон за плащане */}
+                {/* Голям бутон за плащане — първо пита за потвърждение */}
                 <button
                   type="button"
                   disabled={!canProceed}
-                  onClick={goForward}
+                  onClick={() => setConfirmOpen(true)}
                   className={`mt-[16px] flex w-full items-center justify-center rounded-[12px] bg-sun py-[16px] font-golos text-[18px] font-bold text-black/80 transition-colors ${
                     canProceed
                       ? "cursor-pointer hover:bg-[#e0b32f]"
                       : "cursor-not-allowed opacity-50"
                   }`}
                 >
-                  {fmtPrice(totalDue)} {CURRENCY} — Купи сега
+                  {fmtPrice(totalDue)} {CURRENCY} — Резервирай сега
                 </button>
-                {deliveryFee > 0 && (
-                  <p className="mt-[8px] text-center font-golos text-[12px] text-[#a1a1aa]">
-                    Билети {fmtPrice(totalPrice)} {CURRENCY} + такса печатен
-                    билет {fmtPrice(deliveryFee)} {CURRENCY}
-                  </p>
-                )}
               </div>
             </div>
 
-            {/* Сигурно плащане + приети карти */}
+            {/* През сайта не се плаща — сумата се дължи на място */}
             <div className="mt-[18px] flex flex-wrap items-center gap-[10px]">
               <span className="flex items-center gap-[6px] rounded-[9px] bg-[rgba(106,142,78,0.12)] px-[12px] py-[7px] font-golos text-[12.5px] font-semibold text-forest">
-                🔒 Сигурно плащане
+                Плащането се извършва само на място.
               </span>
-              {payBrands.map((b) => (
-                <span
-                  key={b}
-                  className="rounded-[7px] border border-[#dddad2] bg-white px-[10px] py-[6px] font-golos text-[11.5px] font-semibold text-[#3f3f46]"
-                >
-                  {b}
-                </span>
-              ))}
             </div>
           </div>
         )}
@@ -1095,15 +1111,6 @@ function Modal({
                   .map((s) => `${s.label} × ${qtyOf(s.key)}`)
                   .join(" · ")}
               </div>
-              <div className="flex h-[55px] items-center rounded-[10px] bg-white px-[17px] font-golos text-[16px] tracking-[-0.15px] text-black">
-                {delivery === "printed"
-                  ? `Печатен билет — на касата при пристигане${
-                      printedTicketFee > 0
-                        ? ` (+${fmtPrice(printedTicketFee)} ${CURRENCY})`
-                        : ""
-                    }`
-                  : "Дигитален билет — изпратен по имейл"}
-              </div>
               {/* Персонализация от екрана на плащане */}
               {giftFor.trim() && (
                 <div className="flex min-h-[55px] items-center rounded-[10px] bg-white px-[17px] py-[10px] font-golos text-[16px] tracking-[-0.15px] text-black">
@@ -1140,13 +1147,42 @@ function Modal({
         {/* Долни бутони */}
         <div className="mt-auto flex items-center justify-between gap-[16px] px-[24px] pb-[30px] pt-[24px] sm:px-[51px]">
           {step === 6 ? (
-            <button
-              type="button"
-              className="mx-auto flex w-[259px] max-w-full cursor-pointer items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f]"
-              onClick={onClose}
-            >
-              Обратно към Начало
-            </button>
+            // на мобилно бутоните са един под друг, на десктоп — един до друг
+            <div className="mx-auto flex w-full max-w-[540px] flex-col gap-[10px] sm:flex-row sm:justify-center">
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center justify-center gap-[8px] rounded-[10px] border border-forest px-[20px] py-[10px] font-golos text-[15px] font-semibold leading-[20px] text-forest transition-colors hover:bg-[rgba(23,87,59,0.06)] sm:w-auto"
+                onClick={() =>
+                  downloadTicketDoc({
+                    reservationNo,
+                    dateLabel: selectedDate
+                      ? `${selectedDate.d} ${monthNamesLower[selectedDate.m]} ${selectedDate.y}`
+                      : "",
+                    time: selectedSlot,
+                    seats: seatTypes
+                      .filter((s) => qtyOf(s.key) > 0)
+                      .map((s) => `${s.label} × ${qtyOf(s.key)}`)
+                      .join(" · "),
+                    places: totalSelected,
+                    total: `${fmtPrice(totalDue)} ${CURRENCY}`,
+                    name: form.name,
+                    phone: form.phone,
+                    email: form.email,
+                    giftFor: giftFor.trim(),
+                    giftMessage: giftMessage.trim(),
+                  })
+                }
+              >
+                ⬇ Изтегли билета
+              </button>
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f] sm:w-auto"
+                onClick={onClose}
+              >
+                Обратно към Начало
+              </button>
+            </div>
           ) : (
             <>
               {step > 1 ? (
@@ -1160,7 +1196,7 @@ function Modal({
               ) : (
                 <span />
               )}
-              {/* на стъпка 5 основният бутон е големият „Купи сега“ в съдържанието */}
+              {/* на стъпка 5 основният бутон е големият „Резервирай сега“ в съдържанието */}
               {step === 5 ? (
                 <span />
               ) : (
@@ -1181,6 +1217,71 @@ function Modal({
           )}
         </div>
       </div>
+
+      {/* Потвърждение преди записване на резервацията */}
+      {confirmOpen && (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 p-[16px]"
+          onClick={(e) => {
+            e.stopPropagation();
+            setConfirmOpen(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={CONFIRM_TEXT.title}
+            className="w-[440px] max-w-full rounded-[12px] bg-offwhite p-[24px] sm:p-[28px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-golos text-[19px] font-bold leading-[1.3] text-ink">
+              {CONFIRM_TEXT.title}
+            </h3>
+
+            <div className="mt-[14px] flex flex-col gap-[6px] rounded-[10px] bg-[rgba(106,142,78,0.1)] px-[14px] py-[12px]">
+              <p className="font-golos text-[14px] font-semibold text-ink">
+                {selectedDate
+                  ? `${selectedDate.d} ${monthNamesLower[selectedDate.m]} ${selectedDate.y}`
+                  : ""}{" "}
+                · {selectedSlot} ч
+              </p>
+              <p className="font-golos text-[13.5px] leading-[1.5] text-[#3f3f46]">
+                {seatTypes
+                  .filter((s) => qtyOf(s.key) > 0)
+                  .map((s) => `${s.label} × ${qtyOf(s.key)}`)
+                  .join(" · ")}
+              </p>
+              <p className="font-golos text-[14px] font-bold text-forest">
+                Общо: {fmtPrice(totalDue)} {CURRENCY}
+              </p>
+            </div>
+
+            <p className="mt-[12px] font-golos text-[13.5px] leading-[1.55] text-[#545454]">
+              {CONFIRM_TEXT.body}
+            </p>
+
+            <div className="mt-[20px] flex flex-col gap-[10px] sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                className="cursor-pointer rounded-[10px] border border-[#dddad2] px-[20px] py-[10px] font-golos text-[14px] font-semibold text-[#3f3f46] transition-colors hover:bg-black/5"
+              >
+                {CONFIRM_TEXT.cancel}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmOpen(false);
+                  goForward();
+                }}
+                className="cursor-pointer rounded-[10px] bg-sun px-[22px] py-[10px] font-golos text-[14px] font-bold text-black/80 transition-colors hover:bg-[#e0b32f]"
+              >
+                {CONFIRM_TEXT.confirm}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Галерия в голям формат */}
       {lightbox !== null && (

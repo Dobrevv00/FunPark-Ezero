@@ -48,6 +48,7 @@ import {
   type BookingRecord,
   type SeatCounts,
   type SeatKey,
+  type SessionPlan,
 } from "@/lib/bookingStore";
 import { dayKey, monthNames, monthNamesLower, weekdays } from "./calendarData";
 
@@ -470,6 +471,8 @@ export default function AdminCalendar() {
   const [pendingSlotDelete, setPendingSlotDelete] = useState<{
     time: string;
     count: number;
+    /** Периодът, от който идва часът — ако идва от сесия */
+    plan?: SessionPlan;
   } | null>(null);
 
   useEffect(() => {
@@ -920,46 +923,26 @@ export default function AdminCalendar() {
                     >
                       {blocked.includes(slotKey) ? "Отблокирай" : "Блокирай"}
                     </button>
+                    {/* един бутон — обхватът се избира в диалога */}
                     <button
                       type="button"
-                      aria-label={`Премахни час ${slot} само за този ден`}
-                      title={`Премахни ${slot} само за ${dateLabelFromKey(selected)}`}
-                      onClick={() => {
-                        const count = countBookingsAtDayTime(selected, slot);
-                        if (count > 0) {
-                          setPendingSlotDelete({ time: slot, count });
-                        } else {
-                          removeSlotForDay(selected, slot);
-                          setSlotOk(
-                            `${slot} е премахнат само за ${dateLabelFromKey(selected)}.`,
-                          );
-                        }
-                      }}
-                      className="cursor-pointer px-[6px] text-[15px] leading-none text-[#a1a1aa] transition-colors hover:text-red-600"
+                      aria-label={`Премахни час ${slot}`}
+                      title={`Премахни ${slot} — за деня или за целия период`}
+                      onClick={() =>
+                        setPendingSlotDelete({
+                          time: slot,
+                          count: countBookingsAtDayTime(selected, slot),
+                          plan:
+                            slotSource.source === "plan" &&
+                            slotSource.plan.times.includes(slot)
+                              ? slotSource.plan
+                              : undefined,
+                        })
+                      }
+                      className="cursor-pointer rounded-[8px] border border-[#dddad2] px-[10px] py-[6px] text-[11.5px] font-semibold text-[#3f3f46] transition-colors hover:border-red-400 hover:text-red-600"
                     >
-                      ✕
+                      Премахни час
                     </button>
-                    {/* часът идва от сесия — може да се махне и от целия период */}
-                    {slotSource.source === "plan" &&
-                      slotSource.plan.times.includes(slot) && (
-                        <button
-                          type="button"
-                          aria-label={`Премахни час ${slot} от целия период`}
-                          title={`Премахни ${slot} от периода ${shortDate(slotSource.plan.from)} – ${shortDate(slotSource.plan.to)}`}
-                          onClick={() => {
-                            const plan = slotSource.plan;
-                            const rest = plan.times.filter((t) => t !== slot);
-                            if (rest.length === 0) removeSchedule(plan.id);
-                            else updateSchedule(plan.id, { times: rest });
-                            setSlotOk(
-                              `${slot} е премахнат от периода ${shortDate(plan.from)} – ${shortDate(plan.to)}.`,
-                            );
-                          }}
-                          className="cursor-pointer rounded-[8px] border border-[#dddad2] px-[10px] py-[6px] text-[11.5px] font-semibold text-[#3f3f46] transition-colors hover:border-red-400 hover:text-red-600"
-                        >
-                          Премахни час
-                        </button>
-                      )}
                   </div>
                   {capEditor === slot && (
                     <>
@@ -1127,33 +1110,67 @@ export default function AdminCalendar() {
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="font-golos text-[18px] font-bold text-ink">
-              Изтриване на час {pendingSlotDelete.time}
+              Премахване на час {pendingSlotDelete.time}
             </h3>
+            {pendingSlotDelete.count > 0 && (
+              <p className="mt-[8px] text-[14px] leading-[1.4] text-[#545454]">
+                За {dateLabelFromKey(selected)} в този час има{" "}
+                <span className="font-semibold text-ink">
+                  {pendingSlotDelete.count}
+                </span>{" "}
+                резервации. Те се запазват в регистъра, но часът няма да може да
+                се избира.
+              </p>
+            )}
             <p className="mt-[8px] text-[14px] leading-[1.4] text-[#545454]">
-              За {dateLabelFromKey(selected)} в този час има{" "}
-              <span className="font-semibold text-ink">
-                {pendingSlotDelete.count}
-              </span>{" "}
-              резервации. Те се запазват в регистъра, но часът няма да може да
-              се избира за този ден. Останалите дни не се променят.
+              Изберете за кои дни да отпадне часът:
             </p>
-            <div className="mt-[24px] flex justify-end gap-[10px]">
+
+            <div className="mt-[20px] flex flex-col gap-[10px]">
+              <button
+                type="button"
+                onClick={() => {
+                  removeSlotForDay(selected, pendingSlotDelete.time);
+                  setSlotOk(
+                    `${pendingSlotDelete.time} е премахнат само за ${dateLabelFromKey(selected)}.`,
+                  );
+                  setPendingSlotDelete(null);
+                }}
+                className="cursor-pointer rounded-[10px] border border-[#dddad2] px-[20px] py-[10px] text-left text-[14px] font-semibold text-ink transition-colors hover:border-forest hover:text-forest"
+              >
+                Само за {dateLabelFromKey(selected)}
+              </button>
+
+              {pendingSlotDelete.plan && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const plan = pendingSlotDelete.plan!;
+                    const rest = plan.times.filter(
+                      (t) => t !== pendingSlotDelete.time,
+                    );
+                    if (rest.length === 0) removeSchedule(plan.id);
+                    else updateSchedule(plan.id, { times: rest });
+                    setSlotOk(
+                      `${pendingSlotDelete.time} е премахнат от периода ${shortDate(plan.from)} – ${shortDate(plan.to)}.`,
+                    );
+                    setPendingSlotDelete(null);
+                  }}
+                  className="cursor-pointer rounded-[10px] border border-[#dddad2] px-[20px] py-[10px] text-left text-[14px] font-semibold text-ink transition-colors hover:border-forest hover:text-forest"
+                >
+                  За целия период {shortDate(pendingSlotDelete.plan.from)} –{" "}
+                  {shortDate(pendingSlotDelete.plan.to)}
+                </button>
+              )}
+            </div>
+
+            <div className="mt-[20px] flex justify-end">
               <button
                 type="button"
                 onClick={() => setPendingSlotDelete(null)}
                 className="cursor-pointer rounded-[10px] border border-[#dddad2] px-[20px] py-[9px] text-[14px] font-semibold text-[#3f3f46] transition-colors hover:bg-black/5"
               >
                 Откажи
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  removeSlotForDay(selected, pendingSlotDelete.time);
-                  setPendingSlotDelete(null);
-                }}
-                className="cursor-pointer rounded-[10px] bg-red-600 px-[20px] py-[9px] text-[14px] font-semibold text-white transition-colors hover:bg-red-700"
-              >
-                Да, изтрий
               </button>
             </div>
           </div>
