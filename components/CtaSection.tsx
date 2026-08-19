@@ -1,8 +1,17 @@
 import YellowButton from "./YellowButton";
 import { t } from "@/lib/cms";
+import { socialUrl } from "@/lib/socials";
 import type { HomePage } from "@/payload-types";
 
-export default function CtaSection({ content }: { content?: HomePage["cta"] }) {
+export default function CtaSection({
+  content,
+  socialLinks,
+}: {
+  content?: HomePage["cta"];
+  socialLinks?: { network?: string | null; url?: string | null }[] | null;
+}) {
+  // бутонът „Виж в TikTok“ води към профила от настройките, иначе от кода
+  const tiktok = socialUrl("tiktok", socialLinks);
   const titleLine1 = t(content?.titleLine1, "Готови ли сте за следващо");
   const titleLine2 = t(content?.titleLine2, "приключение?");
   const text = t(
@@ -26,7 +35,11 @@ export default function CtaSection({ content }: { content?: HomePage["cta"] }) {
           <p className="mt-[16px] w-[304px] text-[12.7px] font-medium leading-[14.35px] text-[#71717a]">
             {text}
           </p>
-          <YellowButton className="mt-[34px] w-[331px] max-w-full">
+          <YellowButton
+            href={tiktok}
+            external
+            className="mt-[34px] w-[331px] max-w-full"
+          >
             {ctaMobile}
           </YellowButton>
         </div>

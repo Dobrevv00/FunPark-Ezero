@@ -1,5 +1,6 @@
 import YellowButton from "./YellowButton";
 import { mediaUrl, t } from "@/lib/cms";
+import { socialUrl } from "@/lib/socials";
 import type { HomePage } from "@/payload-types";
 
 const videos = [
@@ -29,15 +30,20 @@ function TikTokCard({
   index,
   mobile,
   handle,
+  href,
 }: {
   src: string;
   index: number;
   mobile: boolean;
   handle: string;
+  /** Профилът в TikTok — картата се отваря в нов прозорец */
+  href: string;
 }) {
   return (
     <a
-      href="#"
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
       className={`group relative block shrink-0 overflow-hidden transition-transform duration-300 ease-out hover:-translate-y-[10px] hover:shadow-[0px_20px_40px_0px_rgba(0,0,0,0.35)] active:scale-[0.97] active:duration-100 ${
         mobile ? "h-[485px] w-[272px] rounded-[16.167px]" : "h-[599px] w-[337px] rounded-[20px]"
       }`}
@@ -95,6 +101,8 @@ export default function SocialFeed({
     "Вижте най-добрите моменти от нашите гости @funparkezero",
   );
   const ctaLabel = t(content?.ctaLabel, "Виж в TikTok");
+  // бутонът води към профила в TikTok — от настройките, иначе от кода
+  const tiktok = socialUrl("tiktok", socialLinks);
   const handle = t(content?.handle, "@funparkzero");
   const clips = videos.map((src, i) => mediaUrl(content?.videos?.[i]?.image, src));
   // линковете идват от настройките на сайта; иконите остават в кода
@@ -114,12 +122,16 @@ export default function SocialFeed({
         <p className="absolute left-[16px] top-[100px] w-[348px] max-w-[calc(100%-32px)] text-[12.7px] leading-[17.817px] text-[#f5f5f7]">
           {text}
         </p>
-        <YellowButton className="absolute left-[16px] right-[16px] top-[179px]">
+        <YellowButton
+          href={tiktok}
+          external
+          className="absolute left-[16px] right-[16px] top-[179px]"
+        >
           {ctaLabel}
         </YellowButton>
         <div className="absolute left-0 top-[266px] flex w-full gap-[18px] overflow-x-auto px-[16px] pb-[20px]">
           {clips.map((src, i) => (
-            <TikTokCard key={src} src={src} index={i} mobile handle={handle} />
+            <TikTokCard key={src} src={src} index={i} mobile handle={handle} href={tiktok} />
           ))}
         </div>
       </div>
@@ -133,7 +145,11 @@ export default function SocialFeed({
           {text}
         </p>
 
-        <YellowButton className="absolute left-[calc(75%+61px)] top-[145px] w-[259px]">
+        <YellowButton
+          href={tiktok}
+          external
+          className="absolute left-[calc(75%+61px)] top-[145px] w-[259px]"
+        >
           {ctaLabel}
         </YellowButton>
 
@@ -154,7 +170,14 @@ export default function SocialFeed({
 
         <div className="absolute left-[54px] top-[222px] flex gap-[17.5px]">
           {clips.map((src, i) => (
-            <TikTokCard key={src} src={src} index={i} mobile={false} handle={handle} />
+            <TikTokCard
+              key={src}
+              src={src}
+              index={i}
+              mobile={false}
+              handle={handle}
+              href={tiktok}
+            />
           ))}
         </div>
       </div>

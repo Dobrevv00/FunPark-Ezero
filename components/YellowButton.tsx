@@ -8,12 +8,15 @@ export default function YellowButton({
   className = "",
   booking = false,
   href = "#",
+  external = false,
 }: {
   children: string;
   className?: string;
   booking?: boolean;
   /** По подразбиране е „#“, за да останат старите бутони точно както са. */
   href?: string;
+  /** Външен адрес — отваря се в нов таб */
+  external?: boolean;
 }) {
   const { open } = useBookingModal();
   const classes = `flex items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] transition-colors hover:bg-[#e0b32f] ${className}`;
@@ -45,7 +48,12 @@ export default function YellowButton({
   }
 
   return (
-    <a href={href} className={classes}>
+    <a
+      href={href}
+      className={classes}
+      target={external ? "_blank" : undefined}
+      rel={external ? "noopener noreferrer" : undefined}
+    >
       {label}
     </a>
   );

@@ -47,7 +47,7 @@ export default async function Home() {
         <WhyUs content={home?.whyUs} />
         <RestaurantSection content={home?.restaurant} />
         <SocialFeed content={home?.socialFeed} socialLinks={settings?.socials} />
-        <CtaSection content={home?.cta} />
+        <CtaSection content={home?.cta} socialLinks={settings?.socials} />
       </main>
       <Footer content={footer} socialLinks={settings?.socials} />
     </>
