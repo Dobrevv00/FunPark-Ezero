@@ -1,4 +1,5 @@
 import YellowButton from "./YellowButton";
+import { COMPETITION_MODE } from "@/lib/competitionMode";
 import { mediaUrl, t } from "@/lib/cms";
 import type { HomePage } from "@/payload-types";
 
@@ -10,7 +11,14 @@ export default function Hero({ content }: { content?: HomePage["hero"] }) {
     content?.subtitle,
     "Забавление, природа и незабравими моменти за цялото семейство, всичко на едно място.",
   );
-  const ctaLabel = t(content?.ctaLabel, "Резервирай сега");
+  // режим „Състезание“: главният бутон води към записването за състезанието,
+  // не към резервационния календар; надписът от CMS се връща с режима
+  const ctaLabel = COMPETITION_MODE
+    ? "Запиши се за състезанието"
+    : t(content?.ctaLabel, "Резервирай сега");
+  const ctaProps = COMPETITION_MODE
+    ? ({ href: "/competitions" } as const)
+    : ({ booking: true } as const);
   const imgDesktop = mediaUrl(content?.imageDesktop, "/images/hero.jpg");
   const imgMobile = mediaUrl(content?.imageMobile, "/images/hero-mobile.jpg");
 
@@ -60,7 +68,7 @@ export default function Hero({ content }: { content?: HomePage["hero"] }) {
         </p>
         {/* на телефон е на цяла ширина; на таблет — центриран бутон */}
         <YellowButton
-          booking
+          {...ctaProps}
           className="absolute left-[16px] right-[16px] top-[575px] sm:left-1/2 sm:right-auto sm:w-[360px] sm:-translate-x-1/2"
         >
           {ctaLabel}
@@ -77,7 +85,10 @@ export default function Hero({ content }: { content?: HomePage["hero"] }) {
         <p className="absolute left-[71px] top-[553px] w-[560px] font-golos text-[20px] font-semibold leading-[1.5] text-[rgba(255,254,254,0.92)]">
           {subtitle}
         </p>
-        <YellowButton booking className="absolute left-[71px] top-[643px] w-[259px]">
+        <YellowButton
+          {...ctaProps}
+          className="absolute left-[71px] top-[643px] min-w-[259px]"
+        >
           {ctaLabel}
         </YellowButton>
       </div>
