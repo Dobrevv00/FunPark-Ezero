@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { COMPETITION_MODE } from "@/lib/competitionMode";
 import {
   getMonthWeeks,
@@ -1382,14 +1382,18 @@ export default function BookingModalProvider({
   children: ReactNode;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [initialDate, setInitialDate] = useState<SelectedDate | null>(null);
 
   const open = (date?: SelectedDate) => {
-    // режим „Състезание“: записванията за стандартни сесии са скрити — всеки
-    // бутон за резервация води към записването за състезанието. Календарът и
-    // модалът остават в кода и се връщат с изключването на режима.
-    if (COMPETITION_MODE) {
+    // режим „Състезание“: навсякъде другаде записванията за стандартни сесии
+    // са скрити — бутонът за резервация води към записването за
+    // състезанието. ИЗКЛЮЧЕНИЕ: началната страница ("/") винаги отваря
+    // истинския календар — виж коментара в lib/competitionMode.ts. Календарът
+    // и модалът остават в кода и навсякъде другаде се връщат с изключването
+    // на режима.
+    if (COMPETITION_MODE && pathname !== "/") {
       router.push("/competitions");
       return;
     }

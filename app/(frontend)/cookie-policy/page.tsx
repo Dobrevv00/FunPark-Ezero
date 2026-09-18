@@ -377,8 +377,8 @@ export default function CookiePolicyPage() {
         </P>
         <P>
           Въпроси за бисквитките можете да изпратите на{" "}
-          <Contact href="mailto:torosplay.office@gmail.com">
-            torosplay.office@gmail.com
+          <Contact href="mailto:funparkezero@gmail.com">
+            funparkezero@gmail.com
           </Contact>
           . Администратор на данните е „ТОРОС ПЛЕЙ“ ЕООД, ЕИК 201104491.
         </P>

@@ -1,9 +1,15 @@
 import YellowButton from "./YellowButton";
-import { COMPETITION_MODE } from "@/lib/competitionMode";
 import { mediaUrl, t } from "@/lib/cms";
 import type { HomePage } from "@/payload-types";
 
-/** Текстовете идват от Payload; ако липсват, се ползват тези от кода. */
+/**
+ * Началната страница винаги показва резервационния календар — режим
+ * „Състезание“ (`lib/competitionMode.ts`) тук нарочно не се проверява.
+ * Записването за състезания си остава на страниците „Събития“ и
+ * „Записване за състезания“, непроменено.
+ *
+ * Текстовете идват от Payload; ако липсват, се ползват тези от кода.
+ */
 export default function Hero({ content }: { content?: HomePage["hero"] }) {
   const titleLine1 = t(content?.titleLine1, "Изживей");
   const titleLine2 = t(content?.titleLine2, "приключението");
@@ -11,14 +17,8 @@ export default function Hero({ content }: { content?: HomePage["hero"] }) {
     content?.subtitle,
     "Забавление, природа и незабравими моменти за цялото семейство, всичко на едно място.",
   );
-  // режим „Състезание“: главният бутон води към записването за състезанието,
-  // не към резервационния календар; надписът от CMS се връща с режима
-  const ctaLabel = COMPETITION_MODE
-    ? "Запиши се за състезанието"
-    : t(content?.ctaLabel, "Резервирай сега");
-  const ctaProps = COMPETITION_MODE
-    ? ({ href: "/competitions" } as const)
-    : ({ booking: true } as const);
+  const ctaLabel = t(content?.ctaLabel, "Резервирай сега");
+  const ctaProps = { booking: true } as const;
   const imgDesktop = mediaUrl(content?.imageDesktop, "/images/hero.jpg");
   const imgMobile = mediaUrl(content?.imageMobile, "/images/hero-mobile.jpg");
 

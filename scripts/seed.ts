@@ -22,7 +22,7 @@ const run = async () => {
       },
       contact: {
         phone: "+359 88 123 4567",
-        email: "info@funparkzero.bg",
+        email: "funparkezero@gmail.com",
         addressLine1: "ул. „Димитър Димов“,",
         addressLine2: "8000 Бургас",
       },
@@ -81,7 +81,7 @@ const run = async () => {
         contactLines: [
           { text: "ул. Езерна 1, 9000 Варна" },
           { text: "+359 88 123 4567" },
-          { text: "info@funparkzero.bg" },
+          { text: "funparkezero@gmail.com" },
         ],
       },
       mobile: {
@@ -98,7 +98,7 @@ const run = async () => {
         contactLines: [
           { text: "ул. Езерна 1, Бургас" },
           { text: "+359 88 123 4567" },
-          { text: "info@funparkzero.bg" },
+          { text: "funparkezero@gmail.com" },
         ],
       },
     },
@@ -259,7 +259,7 @@ const run = async () => {
           ],
           contactLines: [
             { text: "+359 888 123 456" },
-            { text: "info@funparkezero.bg" },
+            { text: "funparkezero@gmail.com" },
             { text: "ул. „Езерова“ 12, Бургас" },
           ],
           copyright: "© 2026 Fun Park Ezero. Всички права запазени.",
@@ -288,7 +288,7 @@ const run = async () => {
           },
           {
             label: "Контакти",
-            lines: [{ text: "inquiries@kavatsi.com" }, { text: "+359 800 548 568" }],
+            lines: [{ text: "funparkezero@gmail.com" }, { text: "+359 800 548 568" }],
           },
           {
             label: "Работно време",

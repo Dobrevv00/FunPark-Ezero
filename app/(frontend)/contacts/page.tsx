@@ -30,7 +30,7 @@ const infoColumns = [
     icon: "/icons/call-w.svg",
     iconClass: "size-[23px]",
     label: "Контакти",
-    lines: ["inquiries@kavatsi.com", "+359 800 548 568"],
+    lines: ["funparkezero@gmail.com", "+359 800 548 568"],
   },
   {
     icon: "/icons/schedule-w.svg",

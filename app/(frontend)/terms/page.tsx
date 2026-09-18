@@ -83,8 +83,8 @@ export default function TermsPage() {
             </>,
             <>
               Имейл:{" "}
-              <Contact href="mailto:torosplay.office@gmail.com">
-                torosplay.office@gmail.com
+              <Contact href="mailto:funparkezero@gmail.com">
+                funparkezero@gmail.com
               </Contact>
             </>,
           ]}
@@ -92,8 +92,8 @@ export default function TermsPage() {
         <P>
           Паркът се намира на ул. „Димитър Димов“, 8000 Бургас. За резервации и
           общи въпроси можете да ползвате{" "}
-          <Contact href="mailto:inquiries@kavatsi.com">
-            inquiries@kavatsi.com
+          <Contact href="mailto:funparkezero@gmail.com">
+            funparkezero@gmail.com
           </Contact>{" "}
           или данните на страница{" "}
           <Link href="/contacts" className={legalLink}>
@@ -244,8 +244,8 @@ export default function TermsPage() {
         <P>
           Ако желаете да промените или откажете вече потвърдена резервация, моля
           свържете се с нас възможно най-рано на{" "}
-          <Contact href="mailto:inquiries@kavatsi.com">
-            inquiries@kavatsi.com
+          <Contact href="mailto:funparkezero@gmail.com">
+            funparkezero@gmail.com
           </Contact>{" "}
           или по телефона, посочен на страница{" "}
           <Link href="/contacts" className={legalLink}>
@@ -348,8 +348,8 @@ export default function TermsPage() {
       <Section id="complaints" title="14. Рекламации и спорове">
         <P>
           Ако не сте удовлетворени от услуга, моля свържете се с нас на{" "}
-          <Contact href="mailto:inquiries@kavatsi.com">
-            inquiries@kavatsi.com
+          <Contact href="mailto:funparkezero@gmail.com">
+            funparkezero@gmail.com
           </Contact>
           . Разглеждаме всяко оплакване и ви отговаряме в разумен срок.
         </P>
@@ -400,14 +400,14 @@ export default function TermsPage() {
             <>Адрес на парка: ул. „Димитър Димов“, 8000 Бургас</>,
             <>
               Имейл за резервации и общи въпроси:{" "}
-              <Contact href="mailto:inquiries@kavatsi.com">
-                inquiries@kavatsi.com
+              <Contact href="mailto:funparkezero@gmail.com">
+                funparkezero@gmail.com
               </Contact>
             </>,
             <>
               Имейл на дружеството:{" "}
-              <Contact href="mailto:torosplay.office@gmail.com">
-                torosplay.office@gmail.com
+              <Contact href="mailto:funparkezero@gmail.com">
+                funparkezero@gmail.com
               </Contact>
             </>,
             <>

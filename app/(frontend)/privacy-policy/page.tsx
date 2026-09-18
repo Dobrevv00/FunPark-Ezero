@@ -72,8 +72,8 @@ export default function PrivacyPolicyPage() {
             </>,
             <>
               Имейл за въпроси относно личните данни:{" "}
-              <Contact href="mailto:torosplay.office@gmail.com">
-                torosplay.office@gmail.com
+              <Contact href="mailto:funparkezero@gmail.com">
+                funparkezero@gmail.com
               </Contact>
             </>,
           ]}
@@ -396,8 +396,8 @@ export default function PrivacyPolicyPage() {
         />
         <P>
           За да упражните правата си, пишете ни на{" "}
-          <Contact href="mailto:torosplay.office@gmail.com">
-            torosplay.office@gmail.com
+          <Contact href="mailto:funparkezero@gmail.com">
+            funparkezero@gmail.com
           </Contact>
           . Отговаряме в срок от един месец от получаване на искането; при
           усложнени случаи този срок може да бъде удължен, за което ще ви
@@ -453,8 +453,8 @@ export default function PrivacyPolicyPage() {
             </>,
             <>
               Имейл:{" "}
-              <Contact href="mailto:torosplay.office@gmail.com">
-                torosplay.office@gmail.com
+              <Contact href="mailto:funparkezero@gmail.com">
+                funparkezero@gmail.com
               </Contact>
             </>,
             <>

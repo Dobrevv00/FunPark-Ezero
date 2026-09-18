@@ -437,7 +437,7 @@ export default async function EventsPage() {
           ? m.footer.contactLines.map((c) => t(c.text, ""))
           : [
               "+359 888 123 456",
-              "info@funparkezero.bg",
+              "funparkezero@gmail.com",
               "ул. „Езерова“ 12, Бургас",
             ],
       copyright: t(

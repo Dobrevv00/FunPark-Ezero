@@ -97,7 +97,7 @@ const mobileColumns = [
 const contacts = [
   { icon: "/icons/location.svg", w: 12, h: 15, text: "ул. „Димитър Димов“, 8000 Бургас" },
   { icon: "/icons/call.svg", w: 12, h: 12, text: "+359 88 123 4567" },
-  { icon: "/icons/mail.svg", w: 14, h: 11, text: "inquiries@kavatsi.com" },
+  { icon: "/icons/mail.svg", w: 14, h: 11, text: "funparkezero@gmail.com" },
 ];
 
 /** Социални мрежи — светли икони за тъмния фон на футъра */
@@ -145,7 +145,7 @@ function Socials({ className = "", items = socials }: { className?: string; item
 const mobileContacts = [
   { icon: "/icons/location.svg", w: 12, h: 15, text: "ул. „Димитър Димов“, Бургас" },
   { icon: "/icons/call.svg", w: 12, h: 12, text: "+359 88 123 4567" },
-  { icon: "/icons/mail.svg", w: 14, h: 11, text: "inquiries@kavatsi.com" },
+  { icon: "/icons/mail.svg", w: 14, h: 11, text: "funparkezero@gmail.com" },
 ];
 
 function FooterLogo({

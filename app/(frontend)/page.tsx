@@ -1,7 +1,6 @@
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import BookingCard from "@/components/BookingCard";
-import CompetitionCard from "@/components/CompetitionCard";
 import AboutIntro from "@/components/AboutIntro";
 import WhyUs from "@/components/WhyUs";
 import RestaurantSection from "@/components/RestaurantSection";
@@ -9,10 +8,8 @@ import SocialFeed from "@/components/SocialFeed";
 import CtaSection from "@/components/CtaSection";
 import Footer from "@/components/Footer";
 import ComingSoon, { comingSoonEnabled } from "@/components/ComingSoon";
-import { COMPETITION_MODE } from "@/lib/competitionMode";
 import { getInstagramReels } from "@/lib/instagram.server";
 import {
-  getCompetitions,
   getFooter,
   getHeader,
   getHomePage,
@@ -23,17 +20,14 @@ import {
 export const revalidate = 60;
 
 export default async function Home() {
-  const [home, header, footer, settings, competitions, reels] =
-    await Promise.all([
-      getHomePage(),
-      getHeader(),
-      getFooter(),
-      getSiteSettings(),
-      // датите и таксата за картата на състезанието — само в режим „Състезание“
-      COMPETITION_MODE ? getCompetitions() : Promise.resolve([]),
-      // най-новите Reels за „Последвайте ни“; без токен връща []
-      getInstagramReels(),
-    ]);
+  const [home, header, footer, settings, reels] = await Promise.all([
+    getHomePage(),
+    getHeader(),
+    getFooter(),
+    getSiteSettings(),
+    // най-новите Reels за „Последвайте ни“; без токен връща []
+    getInstagramReels(),
+  ]);
 
   // при включен режим „Очаквайте скоро“ страницата показва само екрана
   if (await comingSoonEnabled()) return <ComingSoon settings={settings} />;
@@ -49,12 +43,7 @@ export default async function Home() {
         <Hero content={home?.hero} />
         <section className="bg-cream pb-[157px] lg:pb-[151px]">
           <div className="relative -mt-[27px] lg:-mt-[35px]">
-            {/* режим „Състезание“: състезанието заема мястото на календара */}
-            {COMPETITION_MODE ? (
-              <CompetitionCard competitions={competitions} />
-            ) : (
-              <BookingCard content={home?.bookingCard} />
-            )}
+            <BookingCard content={home?.bookingCard} />
           </div>
           <AboutIntro content={home?.aboutIntro} />
         </section>
