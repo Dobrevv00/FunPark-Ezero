@@ -23,12 +23,28 @@ import {
   getHeader,
   getSiteSettings,
 } from "@/lib/cms.server";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 import type { Event } from "@/payload-types";
 
+const TITLE = "Събития";
+const DESCRIPTION =
+  "Открийте магията на природата и забавленията в Fun Park Ezero. От детски партита до корпоративни тиймбилдинги — тук всеки момент е специален.";
+
 export const metadata: Metadata = {
-  title: "Събития | Fun Park Ezero",
-  description:
-    "Открийте магията на природата и забавленията в Fun Park Ezero. От детски партита до корпоративни тиймбилдинги — тук всеки момент е специален.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/events" },
+  openGraph: {
+    url: "/events",
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 const filters = [

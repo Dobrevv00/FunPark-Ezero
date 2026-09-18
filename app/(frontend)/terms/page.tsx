@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 import LegalShell, {
   Bullets,
   Contact,
@@ -9,10 +10,26 @@ import LegalShell, {
   SubTitle,
 } from "@/components/LegalPage";
 
+const TITLE = "Общи условия";
+const DESCRIPTION =
+  "Общи условия за използване на сайта на Fun Park Ezero — запитвания, резервации, цени, правила за посещение, отговорност и решаване на спорове.";
+
 export const metadata: Metadata = {
-  title: "Общи условия | Fun Park Ezero",
-  description:
-    "Общи условия за използване на сайта на Fun Park Ezero — запитвания, резервации, цени, правила за посещение, отговорност и решаване на спорове.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/terms" },
+  robots: { index: false, follow: true },
+  openGraph: {
+    url: "/terms",
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 export const revalidate = 60;

@@ -12,11 +12,27 @@ import {
   getHeader,
   getSiteSettings,
 } from "@/lib/cms.server";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
+
+const TITLE = "Контакти";
+const DESCRIPTION =
+  "Имате въпроси за нашите услуги или искате да организирате специално събитие? Нашият екип е на разположение да ви съдейства.";
 
 export const metadata: Metadata = {
-  title: "Контакти | Fun Park Ezero",
-  description:
-    "Имате въпроси за нашите услуги или искате да организирате специално събитие? Нашият екип е на разположение да ви съдейства.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/contacts" },
+  openGraph: {
+    url: "/contacts",
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 const infoColumns = [

@@ -15,12 +15,28 @@ import {
   getPackages,
   getSiteSettings,
 } from "@/lib/cms.server";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 import type { Package } from "@/payload-types";
 
+const TITLE = "Рожденни дни";
+const DESCRIPTION =
+  "Пакети за рожден ден с ползване на Въздушна Въжена градина — храна за деца и възрастни, напитки и включена сесия.";
+
 export const metadata: Metadata = {
-  title: "Рожденни дни | Fun Park Ezero",
-  description:
-    "Пакети за рожден ден с ползване на Въздушна Въжена градина — храна за деца и възрастни, напитки и включена сесия.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/birthdays" },
+  openGraph: {
+    url: "/birthdays",
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 export const revalidate = 60;

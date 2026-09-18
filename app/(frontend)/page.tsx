@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Header from "@/components/Header";
 import Hero from "@/components/Hero";
 import BookingCard from "@/components/BookingCard";
@@ -9,6 +10,7 @@ import CtaSection from "@/components/CtaSection";
 import Footer from "@/components/Footer";
 import ComingSoon, { comingSoonEnabled } from "@/components/ComingSoon";
 import { getInstagramReels } from "@/lib/instagram.server";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 import {
   getFooter,
   getHeader,
@@ -18,6 +20,30 @@ import {
 
 // съдържанието се препрочита периодично, за да излизат промените от CMS
 export const revalidate = 60;
+
+const TITLE = "Въжен парк и приключения сред природата — Бургас";
+const DESCRIPTION =
+  "Fun Park Ezero край езерото в Бургас — въжено съоръжение с маршрути за всички нива, ресторант и събития. Резервирайте своето посещение онлайн.";
+
+export const metadata: Metadata = {
+  // пълен низ, не разчита на шаблона от layout.tsx — за root route-а ("/")
+  // Next.js не прилага родителския title.template (наблюдавано и в build
+  // изхода, не само в dev), затова суфиксът тук е изрично изписан
+  title: `${TITLE} | Fun Park Ezero`,
+  description: DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    url: "/",
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
+};
 
 export default async function Home() {
   const [home, header, footer, settings, reels] = await Promise.all([

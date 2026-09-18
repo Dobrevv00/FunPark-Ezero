@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 import LegalShell, {
   Bullets,
   Contact,
@@ -9,10 +10,28 @@ import LegalShell, {
   SubTitle,
 } from "@/components/LegalPage";
 
+const TITLE = "Политика за поверителност";
+const DESCRIPTION =
+  "Как Fun Park Ezero събира и обработва лични данни през сайта — форми за запитване, срокове, доставчици и правата ви по GDPR.";
+
 export const metadata: Metadata = {
-  title: "Политика за поверителност | Fun Park Ezero",
-  description:
-    "Как Fun Park Ezero събира и обработва лични данни през сайта — форми за запитване, срокове, доставчици и правата ви по GDPR.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/privacy-policy" },
+  // юридически бойлърплейт — достъпна за всички, но не си струва да съревновава
+  // за класиране, затова не се индексира (линковете в нея пак се следват)
+  robots: { index: false, follow: true },
+  openGraph: {
+    url: "/privacy-policy",
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 export const revalidate = 60;

@@ -67,8 +67,24 @@ const run = async () => {
   );
   check("никъде не се ползва левова цена на сайта", true, "полето е скрито в админа");
 
-  /* --- 2. редакция от CMS се вижда веднага --- */
-  const target = groups.hexagon[0];
+  /* --- 2. редакция от CMS се вижда веднага ---
+   * Целта тук е само да провери, че CRUD операциите (редакция/скриване) се
+   * отразяват веднага — коя точно група се ползва е без значение. Ако в
+   * момента няма пакет с група „Хексагон“ (виж провалената проверка по-горе —
+   * това е реален сигнал за съдържанието, не грешка в скрипта), тестът пада
+   * назад към произволен съществуващ пакет, вместо да гръмне.
+   */
+  const target = groups.hexagon[0] ?? all[0];
+  if (!target) {
+    check("има поне един пакет, върху който да се провери редакция/скриване", false);
+    console.log("\n" + results.join("\n") + "\n");
+    process.exit(1);
+  }
+  if (groups.hexagon.length === 0) {
+    results.push(
+      `     · (стъпки 2–3 ползват „${target.title}“ вместо пакет от група „Хексагон“ — такъв липсва в момента)`,
+    );
+  }
   const originalTitle = target.title;
   await payload.update({
     collection: "packages",
@@ -93,7 +109,11 @@ const run = async () => {
     data: { active: false },
   });
   const hidden = await visible(payload);
-  check("„Активен“ изключено скрива пакета", hidden.length === 5, `виждат се: ${hidden.length}`);
+  check(
+    "„Активен“ изключено скрива пакета",
+    hidden.length === all.length - 1,
+    `виждат се: ${hidden.length} (очаквани ${all.length - 1})`,
+  );
   const stillInCms = await payload.findByID({ collection: "packages", id: target.id });
   check("записът остава в CMS", Boolean(stillInCms));
   await payload.update({
@@ -101,7 +121,10 @@ const run = async () => {
     id: target.id,
     data: { active: true },
   });
-  check("„Активен“ включено го показва отново", (await visible(payload)).length === 6);
+  check(
+    "„Активен“ включено го показва отново",
+    (await visible(payload)).length === all.length,
+  );
 
   /* --- 4. нов пакет през CMS --- */
   const created = await payload.create({
@@ -125,10 +148,16 @@ const run = async () => {
     .filter((p) => p.apparatus === "hexagon")
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map((p) => `${p.order}:${p.priceEuro}`);
-  check("новият пакет се появява без промяна в кода", withNew.length === 7);
+  // относителни спрямо реалния брой в момента на теста — не приемат
+  // предварително колко пакета вече има в група „Хексагон“
   check(
-    "новият пакет е в правилната група и позиция (подредба 2)",
-    inGroup.join(" ") === "1:399 2:899 2:499 3:599" || inGroup[1]?.startsWith("2:"),
+    "новият пакет се появява без промяна в кода",
+    withNew.length === all.length + 1,
+    `${withNew.length} (очаквани ${all.length + 1})`,
+  );
+  check(
+    "новият пакет е в група „Хексагон“, с подредба 2 и цена 899 €",
+    inGroup.includes("2:899"),
     inGroup.join(" "),
   );
 
@@ -169,7 +198,11 @@ const run = async () => {
   }
   await payload.delete({ collection: "packages", id: created.id });
   const final = await visible(payload);
-  check("тестовите данни са изчистени, остават шестте пакета", final.length === 6);
+  check(
+    "тестовите данни са изчистени, остават колкото преди теста",
+    final.length === all.length,
+    `${final.length} (очаквани ${all.length})`,
+  );
 
   console.log("\n" + results.join("\n") + "\n");
   process.exit(results.some((r) => r.startsWith("ГРЕШКА")) ? 1 : 0);

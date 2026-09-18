@@ -6,17 +6,34 @@ import Badge from "@/components/Badge";
 import YellowButton from "@/components/YellowButton";
 import CompetitionSignup from "@/components/CompetitionSignup";
 import CompetitionRules from "@/components/CompetitionRules";
+import type { PublicCompetition } from "@/lib/competitionsShared";
 import {
   getCompetitions,
   getFooter,
   getHeader,
   getSiteSettings,
 } from "@/lib/cms.server";
+import { DEFAULT_OG_IMAGE, SITE_URL } from "@/lib/site";
+
+const TITLE = "Записване за състезания";
+const DESCRIPTION =
+  "Запишете се за квалификацията на състезанията във Fun Park Ezero — дати на квалификация, полуфинал и финал и класирани участници.";
 
 export const metadata: Metadata = {
-  title: "Записване за състезания | Fun Park Ezero",
-  description:
-    "Запишете се за квалификацията на състезанията във Fun Park Ezero — дати на квалификация, полуфинал и финал и класирани участници.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/competitions" },
+  openGraph: {
+    url: "/competitions",
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 export const revalidate = 60;
@@ -48,6 +65,46 @@ const eyebrowCls =
 const h2Cls =
   "mt-[8px] font-golos text-[24px] font-extrabold leading-[1.2] text-ink lg:text-[32px]";
 
+/**
+ * Structured data (schema.org `Event`) за квалификацията на всяко състезание —
+ * само реалната ISO дата (`qualificationDate`), никога измислена. Полуфиналът
+ * и финалът нямат надежден суров ISO низ на този етап (само форматиран текст),
+ * затова не влизат в схемата.
+ */
+const buildCompetitionsJsonLd = (competitions: PublicCompetition[]) =>
+  competitions
+    .filter((c) => c.qualificationDate)
+    .map((c) => ({
+      "@context": "https://schema.org",
+      "@type": "Event",
+      name: c.title,
+      ...(c.description ? { description: c.description } : {}),
+      startDate: c.qualificationDate,
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      location: {
+        "@type": "Place",
+        name: c.location || "Fun Park Ezero",
+        ...(c.location ? {} : { url: SITE_URL }),
+      },
+      organizer: { "@type": "Organization", name: "Fun Park Ezero", url: SITE_URL },
+      url: `${SITE_URL}/competitions`,
+      ...(c.feeEur !== null
+        ? {
+            offers: {
+              "@type": "Offer",
+              price: c.feeEur,
+              priceCurrency: "EUR",
+              availability:
+                c.spotsLeft === 0
+                  ? "https://schema.org/SoldOut"
+                  : "https://schema.org/InStock",
+              url: `${SITE_URL}/competitions`,
+            },
+          }
+        : {}),
+    }));
+
 export default async function CompetitionsPage() {
   const [header, footer, settings, competitions] = await Promise.all([
     getHeader(),
@@ -66,9 +123,18 @@ export default async function CompetitionsPage() {
   const hasRules = competitions.some(
     (c) => c.rules.length > 0 || c.penalties.length > 0 || c.prizeInfo !== "",
   );
+  const eventsJsonLd = buildCompetitionsJsonLd(competitions);
 
   return (
     <>
+      {eventsJsonLd.map((event, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          // eslint-disable-next-line react/no-danger
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(event) }}
+        />
+      ))}
       <Header
         nav={header?.navItems}
         searchPlaceholder={header?.searchPlaceholder}

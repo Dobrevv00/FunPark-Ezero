@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DEFAULT_OG_IMAGE } from "@/lib/site";
 import LegalShell, {
   Bullets,
   Contact,
@@ -10,10 +11,26 @@ import LegalShell, {
 } from "@/components/LegalPage";
 import { CONSENT_STORAGE_KEY, CONSENT_VERSION } from "@/lib/cookieConsent";
 
+const TITLE = "Политика за бисквитките";
+const DESCRIPTION =
+  "Какви бисквитки и локални записи използва сайтът на Fun Park Ezero, какво съдържат и как да промените избора си по всяко време.";
+
 export const metadata: Metadata = {
-  title: "Политика за бисквитките | Fun Park Ezero",
-  description:
-    "Какви бисквитки и локални записи използва сайтът на Fun Park Ezero, какво съдържат и как да промените избора си по всяко време.",
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/cookie-policy" },
+  robots: { index: false, follow: true },
+  openGraph: {
+    url: "/cookie-policy",
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE],
+  },
+  twitter: {
+    title: `${TITLE} | Fun Park Ezero`,
+    description: DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE.url],
+  },
 };
 
 export const revalidate = 60;
