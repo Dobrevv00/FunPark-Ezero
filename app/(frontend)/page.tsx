@@ -10,6 +10,7 @@ import CtaSection from "@/components/CtaSection";
 import Footer from "@/components/Footer";
 import ComingSoon, { comingSoonEnabled } from "@/components/ComingSoon";
 import { COMPETITION_MODE } from "@/lib/competitionMode";
+import { getInstagramReels } from "@/lib/instagram.server";
 import {
   getCompetitions,
   getFooter,
@@ -22,14 +23,17 @@ import {
 export const revalidate = 60;
 
 export default async function Home() {
-  const [home, header, footer, settings, competitions] = await Promise.all([
-    getHomePage(),
-    getHeader(),
-    getFooter(),
-    getSiteSettings(),
-    // датите и таксата за картата на състезанието — само в режим „Състезание“
-    COMPETITION_MODE ? getCompetitions() : Promise.resolve([]),
-  ]);
+  const [home, header, footer, settings, competitions, reels] =
+    await Promise.all([
+      getHomePage(),
+      getHeader(),
+      getFooter(),
+      getSiteSettings(),
+      // датите и таксата за картата на състезанието — само в режим „Състезание“
+      COMPETITION_MODE ? getCompetitions() : Promise.resolve([]),
+      // най-новите Reels за „Последвайте ни“; без токен връща []
+      getInstagramReels(),
+    ]);
 
   // при включен режим „Очаквайте скоро“ страницата показва само екрана
   if (await comingSoonEnabled()) return <ComingSoon settings={settings} />;
@@ -56,7 +60,11 @@ export default async function Home() {
         </section>
         <WhyUs content={home?.whyUs} />
         <RestaurantSection content={home?.restaurant} />
-        <SocialFeed content={home?.socialFeed} socialLinks={settings?.socials} />
+        <SocialFeed
+          content={home?.socialFeed}
+          socialLinks={settings?.socials}
+          reels={reels}
+        />
         <CtaSection content={home?.cta} socialLinks={settings?.socials} />
       </main>
       <Footer content={footer} socialLinks={settings?.socials} />

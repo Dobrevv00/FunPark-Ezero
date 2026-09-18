@@ -1,6 +1,8 @@
 import YellowButton from "./YellowButton";
+import ReelsRow from "./ReelsRow";
 import { mediaUrl, t } from "@/lib/cms";
 import { socialUrl } from "@/lib/socials";
+import type { InstagramReel } from "@/lib/instagram.server";
 import type { HomePage } from "@/payload-types";
 
 const videos = [
@@ -94,19 +96,30 @@ function TikTokCard({
 export default function SocialFeed({
   content,
   socialLinks,
+  reels,
 }: {
   content?: HomePage["socialFeed"];
   socialLinks?: { network?: string | null; url?: string | null }[] | null;
+  /** Най-новите Reels от Instagram; празно = статичните TikTok карти */
+  reels?: InstagramReel[];
 }) {
   const title = t(content?.title, "Последвайте ни");
   const text = t(
     content?.text,
     "Вижте най-добрите моменти от нашите гости @funparkezero",
   );
-  const ctaLabel = t(content?.ctaLabel, "Виж в TikTok");
-  // бутонът води към профила в TikTok — от настройките, иначе от кода
+  // има ли живи рийлове, секцията става Instagram: картите пускат видеата на
+  // място, а бутонът и профилът сочат Instagram (надписът от CMS е за TikTok)
+  const hasReels = (reels?.length ?? 0) > 0;
+  const instagram = socialUrl("instagram", socialLinks);
+  const igHandle = `@${instagram.match(/instagram\.com\/([^/?#]+)/)?.[1] ?? "fun_park_ezero"}`;
+  const ctaLabel = hasReels
+    ? "Виж в Instagram"
+    : t(content?.ctaLabel, "Виж в TikTok");
+  // бутонът води към профила — от настройките, иначе от кода
   const tiktok = socialUrl("tiktok", socialLinks);
-  const handle = t(content?.handle, "@funparkzero");
+  const ctaHref = hasReels ? instagram : tiktok;
+  const handle = hasReels ? igHandle : t(content?.handle, "@funparkzero");
   const clips = videos.map((src, i) => mediaUrl(content?.videos?.[i]?.image, src));
   // линковете идват от настройките на сайта; иконите остават в кода
   const links = socials.map((s) => ({
@@ -126,16 +139,20 @@ export default function SocialFeed({
           {text}
         </p>
         <YellowButton
-          href={tiktok}
+          href={ctaHref}
           external
           className="absolute left-[16px] right-[16px] top-[179px] sm:right-auto sm:w-[320px]"
         >
           {ctaLabel}
         </YellowButton>
         <div className="absolute left-0 top-[266px] flex w-full gap-[18px] overflow-x-auto px-[16px] pb-[20px]">
-          {clips.map((src, i) => (
-            <TikTokCard key={src} src={src} index={i} mobile handle={handle} href={tiktok} />
-          ))}
+          {hasReels ? (
+            <ReelsRow reels={reels!} mobile handle={handle} />
+          ) : (
+            clips.map((src, i) => (
+              <TikTokCard key={src} src={src} index={i} mobile handle={handle} href={tiktok} />
+            ))
+          )}
         </div>
       </div>
 
@@ -149,7 +166,7 @@ export default function SocialFeed({
         </p>
 
         <YellowButton
-          href={tiktok}
+          href={ctaHref}
           external
           className="absolute left-[calc(75%+61px)] top-[145px] w-[259px]"
         >
@@ -172,16 +189,20 @@ export default function SocialFeed({
         </div>
 
         <div className="absolute left-[54px] top-[222px] flex gap-[17.5px]">
-          {clips.map((src, i) => (
-            <TikTokCard
-              key={src}
-              src={src}
-              index={i}
-              mobile={false}
-              handle={handle}
-              href={tiktok}
-            />
-          ))}
+          {hasReels ? (
+            <ReelsRow reels={reels!} mobile={false} handle={handle} />
+          ) : (
+            clips.map((src, i) => (
+              <TikTokCard
+                key={src}
+                src={src}
+                index={i}
+                mobile={false}
+                handle={handle}
+                href={tiktok}
+              />
+            ))
+          )}
         </div>
       </div>
     </section>

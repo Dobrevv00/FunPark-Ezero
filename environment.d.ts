@@ -7,6 +7,12 @@ declare global {
     interface ProcessEnv {
       DATABASE_URL: string;
       PAYLOAD_SECRET: string;
+      /**
+       * Дълготраен токен за Instagram API (Instagram Login) — за най-новите
+       * Reels в „Последвайте ни“. Незадължителен: без него секцията показва
+       * статичните карти. Подновява се на ~60 дни от Meta приложението.
+       */
+      INSTAGRAM_ACCESS_TOKEN?: string;
     }
   }
 }
