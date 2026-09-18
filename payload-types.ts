@@ -73,13 +73,19 @@ export interface Config {
     attractions: Attraction;
     packages: Package;
     enquiries: Enquiry;
+    competitions: Competition;
+    'competition-registrations': CompetitionRegistration;
     'package-enquiries': PackageEnquiry;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    competitions: {
+      registrations: 'competition-registrations';
+    };
+  };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
@@ -87,6 +93,8 @@ export interface Config {
     attractions: AttractionsSelect<false> | AttractionsSelect<true>;
     packages: PackagesSelect<false> | PackagesSelect<true>;
     enquiries: EnquiriesSelect<false> | EnquiriesSelect<true>;
+    competitions: CompetitionsSelect<false> | CompetitionsSelect<true>;
+    'competition-registrations': CompetitionRegistrationsSelect<false> | CompetitionRegistrationsSelect<true>;
     'package-enquiries': PackageEnquiriesSelect<false> | PackageEnquiriesSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -378,6 +386,141 @@ export interface Enquiry {
   createdAt: string;
 }
 /**
+ * Добавете състезание, за да се появи записване за квалификацията на сайта. Изключете „Активно“ или го изтрийте, за да го премахнете.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitions".
+ */
+export interface Competition {
+  id: number;
+  title: string;
+  /**
+   * По избор — показва се под името на сайта.
+   */
+  description?: string | null;
+  /**
+   * Празно се показва като „Датата предстои“.
+   */
+  qualificationDate?: string | null;
+  semifinalDate?: string | null;
+  finalDate?: string | null;
+  /**
+   * Само ако кръгът е в няколко дни (напр. събота и неделя).
+   */
+  qualificationDateTo?: string | null;
+  semifinalDateTo?: string | null;
+  finalDateTo?: string | null;
+  /**
+   * Включете, докато часовете на стартовете не са определени. Часът от полетата по-горе не се показва.
+   */
+  timeUnknown?: boolean | null;
+  /**
+   * Празно = без ограничение. При запълване записването спира.
+   */
+  maxParticipants?: number | null;
+  /**
+   * Празно = без такса.
+   */
+  feeEur?: number | null;
+  active?: boolean | null;
+  /**
+   * Напр. Парк „Езеро“, Бургас.
+   */
+  location?: string | null;
+  /**
+   * Напр. кога се плаща и за какво се използва.
+   */
+  feeNote?: string | null;
+  /**
+   * Показва се при формата — напр. че записването е само за квалификациите.
+   */
+  registrationNote?: string | null;
+  /**
+   * Оставете празно, докато наградата не е решена.
+   */
+  prizeInfo?: string | null;
+  /**
+   * Всеки раздел се показва на сайта със заглавие, уводен текст и точки.
+   */
+  rules?:
+    | {
+        title?: string | null;
+        intro?: string | null;
+        items?:
+          | {
+              text?: string | null;
+              id?: string | null;
+            }[]
+          | null;
+        id?: string | null;
+      }[]
+    | null;
+  penalties?:
+    | {
+        /**
+         * Напр. +5 секунди.
+         */
+        penalty?: string | null;
+        reason?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  rulesNote?: string | null;
+  /**
+   * Всички, записали се за квалификацията на това състезание през сайта.
+   */
+  registrations?: {
+    docs?: (number | CompetitionRegistration)[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  /**
+   * Изберете измежду записаните за това състезание. Първо запазете състезанието, за да се появят участниците.
+   */
+  semifinalists?: (number | CompetitionRegistration)[] | null;
+  /**
+   * Изберете измежду полуфиналистите.
+   */
+  finalists?: (number | CompetitionRegistration)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Записвания за квалификацията от страница „Състезания“ и от страница „Събития“.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competition-registrations".
+ */
+export interface CompetitionRegistration {
+  id: number;
+  competition?: (number | null) | Competition;
+  /**
+   * Записва се в момента на записването — остава четимо и ако състезанието бъде изтрито.
+   */
+  competitionTitle?: string | null;
+  status?: ('new' | 'confirmed' | 'waiting' | 'rejected') | null;
+  name: string;
+  age: number;
+  phone: string;
+  email: string;
+  /**
+   * Задължително за участници под 18 години.
+   */
+  guardianName?: string | null;
+  note?: string | null;
+  consent?: boolean | null;
+  /**
+   * Адресът, от който е изпратено записването.
+   */
+  pageUrl?: string | null;
+  /**
+   * Не се показва никъде на сайта.
+   */
+  adminNote?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "package-enquiries".
  */
@@ -446,6 +589,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'enquiries';
         value: number | Enquiry;
+      } | null)
+    | ({
+        relationTo: 'competitions';
+        value: number | Competition;
+      } | null)
+    | ({
+        relationTo: 'competition-registrations';
+        value: number | CompetitionRegistration;
       } | null)
     | ({
         relationTo: 'package-enquiries';
@@ -648,6 +799,74 @@ export interface EnquiriesSelect<T extends boolean = true> {
   message?: T;
   selectedPackage?: T;
   selectedPackageTitle?: T;
+  pageUrl?: T;
+  adminNote?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competitions_select".
+ */
+export interface CompetitionsSelect<T extends boolean = true> {
+  title?: T;
+  description?: T;
+  qualificationDate?: T;
+  semifinalDate?: T;
+  finalDate?: T;
+  qualificationDateTo?: T;
+  semifinalDateTo?: T;
+  finalDateTo?: T;
+  timeUnknown?: T;
+  maxParticipants?: T;
+  feeEur?: T;
+  active?: T;
+  location?: T;
+  feeNote?: T;
+  registrationNote?: T;
+  prizeInfo?: T;
+  rules?:
+    | T
+    | {
+        title?: T;
+        intro?: T;
+        items?:
+          | T
+          | {
+              text?: T;
+              id?: T;
+            };
+        id?: T;
+      };
+  penalties?:
+    | T
+    | {
+        penalty?: T;
+        reason?: T;
+        id?: T;
+      };
+  rulesNote?: T;
+  registrations?: T;
+  semifinalists?: T;
+  finalists?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "competition-registrations_select".
+ */
+export interface CompetitionRegistrationsSelect<T extends boolean = true> {
+  competition?: T;
+  competitionTitle?: T;
+  status?: T;
+  name?: T;
+  age?: T;
+  phone?: T;
+  email?: T;
+  guardianName?: T;
+  note?: T;
+  consent?: T;
   pageUrl?: T;
   adminNote?: T;
   updatedAt?: T;

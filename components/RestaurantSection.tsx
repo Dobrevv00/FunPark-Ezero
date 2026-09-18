@@ -10,7 +10,7 @@ const images = [
 ];
 
 const cardBase =
-  "group overflow-hidden rounded-[10px] shadow-[0px_8px_22px_0px_rgba(0,0,0,0.1)] transition-[transform,box-shadow] duration-300 ease-out";
+  "group overflow-hidden rounded-[10px] shadow-[0px_8px_22px_0px_rgba(0,0,0,0.1)] transition-[translate,rotate,scale,box-shadow] duration-300 ease-out";
 
 const imgClass =
   "h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.08]";
@@ -90,7 +90,10 @@ export default function RestaurantSection({
           ].map((pos, i) => (
             <div
               key={pics[i].src}
-              className={`${cardBase} absolute hover:z-10 hover:scale-[1.03] hover:shadow-[0px_22px_48px_0px_rgba(0,0,0,0.22)] ${pos}`}
+              className={`${cardBase} absolute hover:z-10 hover:scale-[1.04] hover:shadow-[0px_22px_48px_0px_rgba(0,0,0,0.22)] ${
+                /* снимките се килват в различни посоки — като разхвърляни полароиди */
+                i % 2 === 0 ? "hover:rotate-[-2deg]" : "hover:rotate-[2deg]"
+              } ${pos}`}
             >
               <img src={pics[i].src} alt={pics[i].alt} className={imgClass} />
             </div>

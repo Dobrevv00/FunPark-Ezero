@@ -44,7 +44,10 @@ function TikTokCard({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group relative block shrink-0 overflow-hidden transition-transform duration-300 ease-out hover:-translate-y-[10px] hover:shadow-[0px_20px_40px_0px_rgba(0,0,0,0.35)] active:scale-[0.97] active:duration-100 ${
+      className={`group relative block shrink-0 overflow-hidden transition-[translate,rotate,scale,box-shadow] duration-300 ease-out hover:-translate-y-[10px] hover:shadow-[0px_20px_40px_0px_rgba(0,0,0,0.35)] active:scale-[0.97] active:duration-100 ${
+        /* съседните карти се килват в различна посока — редът изглежда разчупен */
+        index % 2 === 0 ? "hover:rotate-[-1.8deg]" : "hover:rotate-[1.8deg]"
+      } ${
         mobile ? "h-[485px] w-[272px] rounded-[16.167px]" : "h-[599px] w-[337px] rounded-[20px]"
       }`}
     >
@@ -125,7 +128,7 @@ export default function SocialFeed({
         <YellowButton
           href={tiktok}
           external
-          className="absolute left-[16px] right-[16px] top-[179px]"
+          className="absolute left-[16px] right-[16px] top-[179px] sm:right-auto sm:w-[320px]"
         >
           {ctaLabel}
         </YellowButton>
@@ -161,7 +164,7 @@ export default function SocialFeed({
               target={s.href === "#" ? undefined : "_blank"}
               rel={s.href === "#" ? undefined : "noopener noreferrer"}
               aria-label={s.alt}
-              className="transition-opacity hover:opacity-60"
+              className="fx-icon hover:opacity-80"
             >
               <img src={s.src} alt="" className={s.className} />
             </a>

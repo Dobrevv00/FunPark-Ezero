@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export const revalidate = 60;
 
 /** Датата се пипа ръчно при всяка съществена промяна в политиката. */
-const UPDATED = "14 август 2026 г.";
+const UPDATED = "17 септември 2026 г.";
 
 const toc = [
   { id: "administrator", label: "Кой е администраторът на лични данни" },
@@ -83,7 +83,7 @@ export default function PrivacyPolicyPage() {
           както и телефонът и имейлът за резервации и общи въпроси, са на страница{" "}
           <Link
             href="/contacts"
-            className="font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] transition-colors hover:decoration-forest"
+            className="fx-ink font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] hover:decoration-forest"
           >
             Контакти
           </Link>
@@ -156,6 +156,30 @@ export default function PrivacyPolicyPage() {
           обнови преди пускането на промяната.
         </Note>
 
+        <SubTitle>Записване за състезания</SubTitle>
+        <P>
+          Формата за записване за квалификация на страници „Състезания“ и
+          „Събития“ изпраща:
+        </P>
+        <Bullets
+          items={[
+            "име и фамилия, възраст, телефон и имейл на участника",
+            "име на родител или настойник — само за участници под 18 години",
+            "бележка (по избор) и за кое състезание е записването",
+            "отметка за съгласие с Общите условия и Политиката за поверителност и адреса на страницата, от която е изпратено",
+          ]}
+        />
+        <P>
+          Записванията се пазят в същата база данни като запитванията и ги виждат
+          само оправомощени служители с достъп до администрацията на сайта.
+        </P>
+        <P>
+          Когато участник се класира за полуфинал или финал, на сайта се
+          публикуват само собственото му име и първата буква на фамилията
+          (например „Иван П.“). Телефонът, имейлът, възрастта и данните за
+          родителя не се публикуват.
+        </P>
+
         <SubTitle>Бюлетин</SubTitle>
         <P>
           На страница „Събития“ има поле за имейл за бюлетин. Към момента то не е
@@ -185,6 +209,7 @@ export default function PrivacyPolicyPage() {
           items={[
             "да отговорим на вашето запитване и да ви изпратим поисканата информация или оферта",
             "да организираме събитие или посещение, за което сте се обърнали към нас",
+            "да организираме състезанията, да се свържем със записаните участници и да обявим класираните",
             "да поддържаме сайта работещ, сигурен и защитен от автоматизиран спам",
             "да изпълним свои задължения по закон, когато такива възникнат",
           ]}
@@ -207,7 +232,8 @@ export default function PrivacyPolicyPage() {
                 Стъпки преди сключване на договор
               </strong>{" "}
               (чл. 6, § 1, б. „б“) — когато отговаряме на запитване за пакет,
-              резервация или организиране на събитие.
+              резервация или организиране на събитие, както и при записване и
+              участие в състезание, включително обявяването на класираните.
             </>,
             <>
               <strong className="font-semibold text-ink">
@@ -266,7 +292,7 @@ export default function PrivacyPolicyPage() {
           социални мрежи.
         </P>
         <P>
-          Иконите към Facebook и Instagram са обикновени линкове. Ако ги
+          Иконите към Facebook, Instagram и TikTok са обикновени линкове. Ако ги
           отворите, попадате в сайта на съответната социална мрежа, където важат
           нейните собствени правила за поверителност.
         </P>
@@ -297,6 +323,11 @@ export default function PrivacyPolicyPage() {
               <strong className="font-semibold text-ink">
                 12 месеца от получаване на запитването
               </strong>
+            </>,
+            <>
+              Записвания за състезания: докато трае състезанието и след това
+              толкова, колкото е необходимо за обявяване на резултатите и за
+              отговор на въпроси, свързани с него
             </>,
             <>
               Данни, свързани със сключен договор или със счетоводна отчетност:
@@ -394,7 +425,7 @@ export default function PrivacyPolicyPage() {
           промените избора си — има в{" "}
           <Link
             href="/cookie-policy"
-            className="font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] transition-colors hover:decoration-forest"
+            className="fx-ink font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] hover:decoration-forest"
           >
             Политиката за бисквитките
           </Link>

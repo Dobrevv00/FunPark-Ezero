@@ -2,6 +2,13 @@ import { cache } from "react";
 import { getPayload } from "payload";
 import config from "@payload-config";
 
+import {
+  formatCompetitionPeriod,
+  publicName,
+  type CompetitionPenalty,
+  type CompetitionRule,
+  type PublicCompetition,
+} from "@/lib/competitionsShared";
 import type { Config, Event, Package } from "@/payload-types";
 
 type GlobalSlug = keyof Config["globals"];
@@ -56,6 +63,106 @@ export const getPackages = cache(async (): Promise<Package[]> => {
   } catch (err) {
     console.warn(
       "[cms] пакетите не можаха да бъдат прочетени.",
+      err instanceof Error ? err.message : err,
+    );
+    return [];
+  }
+});
+
+const relId = (v: unknown): number | null => {
+  if (v && typeof v === "object" && "id" in v) return Number((v as { id: unknown }).id);
+  return typeof v === "number" ? v : null;
+};
+
+/**
+ * Активните състезания за страниците „Състезания“ и „Събития“ — подредени по
+ * дата на квалификацията. Връща лек обект, годен за клиентски компонент:
+ * без телефони, имейли и пълни имена — класираните излизат като „Иван П.“.
+ */
+export const getCompetitions = cache(async (): Promise<PublicCompetition[]> => {
+  try {
+    const payload = await getPayload({ config });
+    const res = await payload.find({
+      collection: "competitions",
+      where: { active: { not_equals: false } },
+      sort: "qualificationDate",
+      limit: 50,
+      depth: 0,
+      joins: false,
+      overrideAccess: true,
+    });
+    if (res.docs.length === 0) return [];
+
+    // само името и статусът — за броя записани и за имената на класираните
+    const regs = await payload.find({
+      collection: "competition-registrations",
+      where: { competition: { in: res.docs.map((c) => c.id) } },
+      pagination: false,
+      depth: 0,
+      select: { competition: true, name: true, status: true },
+      overrideAccess: true,
+    });
+    const nameById = new Map(regs.docs.map((r) => [r.id, publicName(r.name)]));
+    const names = (list: unknown) =>
+      (Array.isArray(list) ? list : [])
+        .map((v) => nameById.get(relId(v) ?? -1))
+        .filter((n): n is string => Boolean(n));
+
+    return res.docs.map((c) => {
+      const registeredCount = regs.docs.filter(
+        (r) => relId(r.competition) === c.id && r.status !== "rejected",
+      ).length;
+      const max = c.maxParticipants ?? null;
+      const noTime = c.timeUnknown === true;
+      const rules: CompetitionRule[] = (c.rules ?? []).map((r) => ({
+        title: r.title ?? "",
+        intro: r.intro ?? "",
+        items: (r.items ?? [])
+          .map((i) => i.text ?? "")
+          .filter((t) => t.trim() !== ""),
+      }));
+      const penalties: CompetitionPenalty[] = (c.penalties ?? []).map((p) => ({
+        penalty: p.penalty ?? "",
+        reason: p.reason ?? "",
+      }));
+      return {
+        id: c.id,
+        title: c.title,
+        description: c.description ?? "",
+        qualificationDate: c.qualificationDate ?? null,
+        qualificationDateLabel: formatCompetitionPeriod(
+          c.qualificationDate ?? null,
+          c.qualificationDateTo ?? null,
+          noTime,
+        ),
+        semifinalDateLabel: formatCompetitionPeriod(
+          c.semifinalDate ?? null,
+          c.semifinalDateTo ?? null,
+          noTime,
+        ),
+        finalDateLabel: formatCompetitionPeriod(
+          c.finalDate ?? null,
+          c.finalDateTo ?? null,
+          noTime,
+        ),
+        location: c.location ?? "",
+        feeEur: typeof c.feeEur === "number" ? c.feeEur : null,
+        feeNote: c.feeNote ?? "",
+        registrationNote: c.registrationNote ?? "",
+        prizeInfo: c.prizeInfo ?? "",
+        rules,
+        penalties,
+        rulesNote: c.rulesNote ?? "",
+        maxParticipants: max,
+        registeredCount,
+        spotsLeft: max === null ? null : Math.max(0, max - registeredCount),
+        semifinalists: names(c.semifinalists),
+        finalists: names(c.finalists),
+      };
+    });
+  } catch (err) {
+    console.warn(
+      "[cms] състезанията не можаха да бъдат прочетени.",
       err instanceof Error ? err.message : err,
     );
     return [];

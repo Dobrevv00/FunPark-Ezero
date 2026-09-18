@@ -480,7 +480,7 @@ function Modal({
           <button
             type="button"
             aria-label="Затвори"
-            className="cursor-pointer font-golos text-[18px] leading-none text-[#a1a1aa] transition-colors hover:text-ink"
+            className="fx-icon cursor-pointer font-golos text-[18px] leading-none text-[#a1a1aa] hover:text-ink"
             onClick={onClose}
           >
             ✕
@@ -515,7 +515,7 @@ function Modal({
               <button
                 type="button"
                 aria-label="Предишен месец"
-                className="flex size-[40px] cursor-pointer items-center justify-center rounded-full border-[1.107px] border-[#e4e1d8] transition-colors hover:bg-black/5"
+                className="fx-tile flex size-[40px] cursor-pointer items-center justify-center rounded-full border-[1.107px] border-[#e4e1d8] hover:bg-black/5"
                 onClick={prevMonth}
               >
                 <img src="/icons/arrow-back.svg" alt="" className="h-[11px] w-[7px]" />
@@ -526,7 +526,7 @@ function Modal({
               <button
                 type="button"
                 aria-label="Следващ месец"
-                className="flex size-[40px] cursor-pointer items-center justify-center rounded-full border-[1.107px] border-[#e4e1d8] transition-colors hover:bg-black/5"
+                className="fx-tile flex size-[40px] cursor-pointer items-center justify-center rounded-full border-[1.107px] border-[#e4e1d8] hover:bg-black/5"
                 onClick={nextMonth}
               >
                 <img
@@ -588,7 +588,7 @@ function Modal({
                       <button
                         key={ci}
                         type="button"
-                        className={`${base} ${cls} cursor-pointer transition-colors ${
+                        className={`${base} ${cls} fx-tile cursor-pointer ${
                           isSelected ? "" : "hover:bg-black/5"
                         }`}
                         onClick={() =>
@@ -669,7 +669,7 @@ function Modal({
                       <button
                         key={time}
                         type="button"
-                        className={`flex flex-1 cursor-pointer items-center justify-center rounded-[15.099px] py-[15.099px] font-golos text-[17.616px] font-semibold transition-colors ${
+                        className={`fx-tile flex flex-1 cursor-pointer items-center justify-center rounded-[15.099px] py-[15.099px] font-golos text-[17.616px] font-semibold ${
                           isSelected
                             ? "bg-forest text-offwhite"
                             : "border-[1.258px] border-[#dddad2] text-[#3f3f46] hover:border-forest"
@@ -740,9 +740,9 @@ function Modal({
                         type="button"
                         aria-label={`По-малко · ${s.label}`}
                         disabled={!canMinus}
-                        className={`flex size-[36px] items-center justify-center rounded-full border-[1.947px] border-[#dddad2] font-golos text-[19px] font-semibold transition-colors ${
+                        className={`flex size-[36px] items-center justify-center rounded-full border-[1.947px] border-[#dddad2] font-golos text-[19px] font-semibold ${
                           canMinus
-                            ? "cursor-pointer text-[#3f3f46] hover:bg-black/5"
+                            ? "fx-tile cursor-pointer text-[#3f3f46] hover:bg-black/5"
                             : "cursor-not-allowed text-[#c9c6bd]"
                         }`}
                         onClick={() => changeSeat(s.key, -1)}
@@ -756,9 +756,9 @@ function Modal({
                         type="button"
                         aria-label={`Повече · ${s.label}`}
                         disabled={!canPlus}
-                        className={`flex size-[36px] items-center justify-center rounded-full font-golos text-[19px] font-semibold text-offwhite transition-colors ${
+                        className={`flex size-[36px] items-center justify-center rounded-full font-golos text-[19px] font-semibold text-offwhite ${
                           canPlus
-                            ? "cursor-pointer bg-forest hover:bg-pine"
+                            ? "fx-tile cursor-pointer bg-forest hover:bg-pine"
                             : "cursor-not-allowed bg-[#dddad2]"
                         }`}
                         onClick={() => changeSeat(s.key, 1)}
@@ -938,7 +938,7 @@ function Modal({
                       type="button"
                       onClick={() => setLightbox(i + 1)}
                       aria-label="Отвори снимката в голям формат"
-                      className="relative h-[62px] cursor-zoom-in overflow-hidden rounded-[8px] ring-forest transition-all hover:ring-[2px]"
+                      className="fx-tile relative h-[62px] cursor-zoom-in overflow-hidden rounded-[8px] ring-forest hover:ring-[2px]"
                     >
                       <img src={t.src} alt="" className="h-full w-full object-cover" />
                       {t.video && (
@@ -957,7 +957,7 @@ function Modal({
                   <button
                     type="button"
                     onClick={() => setLightbox(0)}
-                    className="flex h-[62px] cursor-pointer items-center justify-center rounded-[8px] border border-[#dddad2] px-[4px] text-center font-golos text-[10px] font-semibold leading-[1.2] text-[#545454] transition-colors hover:border-forest hover:text-forest"
+                    className="fx-tile flex h-[62px] cursor-pointer items-center justify-center rounded-[8px] border border-[#dddad2] px-[4px] text-center font-golos text-[10px] font-semibold leading-[1.2] text-[#545454] hover:border-forest hover:text-forest"
                   >
                     Всички снимки
                   </button>
@@ -1057,9 +1057,9 @@ function Modal({
                   type="button"
                   disabled={!canProceed}
                   onClick={() => setConfirmOpen(true)}
-                  className={`mt-[16px] flex w-full items-center justify-center rounded-[12px] bg-sun py-[16px] font-golos text-[18px] font-bold text-black/80 transition-colors ${
+                  className={`mt-[16px] flex w-full items-center justify-center rounded-[12px] bg-sun py-[16px] font-golos text-[18px] font-bold text-black/80 ${
                     canProceed
-                      ? "cursor-pointer hover:bg-[#e0b32f]"
+                      ? "fx-pop cursor-pointer hover:bg-[#e0b32f]"
                       : "cursor-not-allowed opacity-50"
                   }`}
                 >
@@ -1151,7 +1151,7 @@ function Modal({
             <div className="mx-auto flex w-full max-w-[540px] flex-col gap-[10px] sm:flex-row sm:justify-center">
               <button
                 type="button"
-                className="flex w-full cursor-pointer items-center justify-center gap-[8px] rounded-[10px] border border-forest px-[20px] py-[10px] font-golos text-[15px] font-semibold leading-[20px] text-forest transition-colors hover:bg-[rgba(23,87,59,0.06)] sm:w-auto"
+                className="fx-outline flex w-full cursor-pointer items-center justify-center gap-[8px] rounded-[10px] border border-forest px-[20px] py-[10px] font-golos text-[15px] font-semibold leading-[20px] text-forest sm:w-auto"
                 onClick={() =>
                   downloadTicketDoc({
                     reservationNo,
@@ -1177,7 +1177,7 @@ function Modal({
               </button>
               <button
                 type="button"
-                className="flex w-full cursor-pointer items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f] sm:w-auto"
+                className="fx-pop flex w-full cursor-pointer items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 hover:bg-[#e0b32f] sm:w-auto"
                 onClick={onClose}
               >
                 Обратно към Начало
@@ -1188,7 +1188,7 @@ function Modal({
               {step > 1 ? (
                 <button
                   type="button"
-                  className="flex w-[259px] max-w-[40%] cursor-pointer items-center justify-center rounded-[10px] px-[24px] py-[10px] font-golos text-[15px] text-black transition-colors hover:bg-black/5"
+                  className="fx-soft flex w-[259px] max-w-[40%] cursor-pointer items-center justify-center rounded-[10px] px-[24px] py-[10px] font-golos text-[15px] text-black hover:bg-black/5"
                   onClick={() => setStep(step - 1)}
                 >
                   Назад
@@ -1203,9 +1203,9 @@ function Modal({
                 <button
                   type="button"
                   disabled={!canProceed}
-                  className={`flex w-[259px] max-w-[55%] items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors ${
+                  className={`flex w-[259px] max-w-[55%] items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 ${
                     canProceed
-                      ? "cursor-pointer hover:bg-[#e0b32f]"
+                      ? "fx-pop cursor-pointer hover:bg-[#e0b32f]"
                       : "cursor-not-allowed opacity-50"
                   }`}
                   onClick={goForward}
@@ -1264,7 +1264,7 @@ function Modal({
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
-                className="cursor-pointer rounded-[10px] border border-[#dddad2] px-[20px] py-[10px] font-golos text-[14px] font-semibold text-[#3f3f46] transition-colors hover:bg-black/5"
+                className="fx-soft cursor-pointer rounded-[10px] border border-[#dddad2] px-[20px] py-[10px] font-golos text-[14px] font-semibold text-[#3f3f46] hover:bg-black/5"
               >
                 {CONFIRM_TEXT.cancel}
               </button>
@@ -1274,7 +1274,7 @@ function Modal({
                   setConfirmOpen(false);
                   goForward();
                 }}
-                className="cursor-pointer rounded-[10px] bg-sun px-[22px] py-[10px] font-golos text-[14px] font-bold text-black/80 transition-colors hover:bg-[#e0b32f]"
+                className="fx-pop cursor-pointer rounded-[10px] bg-sun px-[22px] py-[10px] font-golos text-[14px] font-bold text-black/80 hover:bg-[#e0b32f]"
               >
                 {CONFIRM_TEXT.confirm}
               </button>
@@ -1299,7 +1299,7 @@ function Modal({
               e.stopPropagation();
               setLightbox(null);
             }}
-            className="absolute right-[18px] top-[18px] cursor-pointer rounded-full bg-white/15 px-[14px] py-[6px] font-golos text-[20px] leading-none text-white transition-colors hover:bg-white/30"
+            className="fx-icon absolute right-[18px] top-[18px] cursor-pointer rounded-full bg-white/15 px-[14px] py-[6px] font-golos text-[20px] leading-none text-white hover:bg-white/30"
           >
             ✕
           </button>
@@ -1313,7 +1313,7 @@ function Modal({
                 (i) => ((i ?? 0) - 1 + galleryAll.length) % galleryAll.length
               );
             }}
-            className="absolute left-[10px] top-1/2 flex size-[44px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/30 sm:left-[26px]"
+            className="fx-tile absolute left-[10px] top-1/2 flex size-[44px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/15 hover:bg-white/30 sm:left-[26px]"
           >
             <img
               src="/icons/arrow-back.svg"
@@ -1328,7 +1328,7 @@ function Modal({
               e.stopPropagation();
               setLightbox((i) => ((i ?? 0) + 1) % galleryAll.length);
             }}
-            className="absolute right-[10px] top-1/2 flex size-[44px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/15 transition-colors hover:bg-white/30 sm:right-[26px]"
+            className="fx-tile absolute right-[10px] top-1/2 flex size-[44px] -translate-y-1/2 cursor-pointer items-center justify-center rounded-full bg-white/15 hover:bg-white/30 sm:right-[26px]"
           >
             <img
               src="/icons/arrow-back.svg"
@@ -1355,7 +1355,7 @@ function Modal({
                 type="button"
                 aria-label={`Снимка ${i + 1}`}
                 onClick={() => setLightbox(i)}
-                className={`h-[52px] w-[74px] cursor-pointer overflow-hidden rounded-[7px] transition-opacity ${
+                className={`fx-tile h-[52px] w-[74px] cursor-pointer overflow-hidden rounded-[7px] ${
                   i === lightbox
                     ? "ring-[2px] ring-sun"
                     : "opacity-55 hover:opacity-100"

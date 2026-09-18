@@ -331,7 +331,7 @@ export default async function BirthdaysPage() {
                 )}
               </div>
             )}
-            <div className="mt-[20px] grid gap-[20px] lg:mt-[28px] lg:grid-cols-3 lg:gap-[24px]">
+            <div className="mt-[20px] grid gap-[20px] md:grid-cols-2 lg:mt-[28px] lg:grid-cols-3 lg:gap-[24px]">
               {g.items.map(renderCard)}
             </div>
           </section>

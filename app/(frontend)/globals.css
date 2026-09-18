@@ -8,6 +8,13 @@
   --color-cream: #faf7ee;
   --color-offwhite: #fffefe;
   --color-ink: #18181b;
+
+  /*
+   * Десктоп версията започва от 1280 px вместо от 1024 px. Под тази ширина
+   * (телефони, таблети, iPad — и в landscape) се показва гъвкавата версия,
+   * защото десктоп дизайнът е с фиксирани позиции, начертани за 1512 px.
+   */
+  --breakpoint-lg: 80rem;
 }
 
 @theme inline {
@@ -18,4 +25,219 @@
 body {
   background-color: var(--color-offwhite);
   color: var(--color-ink);
+}
+
+/*
+ * Десктоп дизайнът е начертан за 1512 px. Между 1280 и ~1530 px го смаляваме
+ * пропорционално, за да влиза изцяло в екрана, без да се пренарежда.
+ * Стойностите оставят място за вертикалния скролбар (~17 px).
+ */
+@media (min-width: 1280px) and (max-width: 1365.98px) {
+  .fit-1512 {
+    zoom: 0.835;
+  }
+}
+@media (min-width: 1366px) and (max-width: 1439.98px) {
+  .fit-1512 {
+    zoom: 0.892;
+  }
+}
+@media (min-width: 1440px) and (max-width: 1529.98px) {
+  .fit-1512 {
+    zoom: 0.941;
+  }
+}
+
+/* =========================================================================
+ * Ховър ефекти
+ *
+ * Класовете се слагат върху елементите, които вече имат ховър (бутони,
+ * линкове, карти, икони). Правилата са ИЗВЪН слой, за да могат да надделеят
+ * над `transition-colors`, `text-…` и другите Tailwind класове.
+ *
+ *   .fx-pop      главни бутони — подскок, лек наклон и светъл отблясък
+ *   .fx-outline  бутони с контур — цветът се налива отляво надясно
+ *   .fx-tile     малки плочки: дни в календара, филтри, чипове
+ *   .fx-soft     дискретни бутони: стрелки, „х“, редове в списък
+ *   .fx-card     карти — повдигат се и се килват леко
+ *   .fx-icon     икони и лого — подскачат с лека въртележка
+ *   .fx-link     линкове в менюто и футъра — подчертаване, което се изтегля
+ *   .fx-ink      линкове в текст — жълт маркер минава под думите
+ *
+ * Ефектите с движение важат само за мишка (не за докосване) и се изключват
+ * при „намалено движение“ в системните настройки.
+ * ========================================================================= */
+
+@layer components {
+  /* позицията е в слой, за да може `absolute` от Tailwind да я смени */
+  .fx-link {
+    display: inline-block;
+  }
+}
+
+.fx-pop,
+.fx-outline,
+.fx-tile,
+.fx-soft,
+.fx-card,
+.fx-icon,
+.fx-link,
+.fx-ink {
+  transition:
+    transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.28s ease,
+    background-size 0.35s ease,
+    background-position 0.55s ease,
+    background-color 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease,
+    opacity 0.25s ease,
+    /* търсачката в менюто се разширява при фокус */ width 0.2s ease;
+}
+
+/* Отблясъкът минава през бутона — стои извън него, докато не се посочи */
+.fx-pop {
+  background-image: linear-gradient(
+    110deg,
+    rgba(255, 255, 255, 0) 38%,
+    rgba(255, 255, 255, 0.55) 50%,
+    rgba(255, 255, 255, 0) 62%
+  );
+  background-repeat: no-repeat;
+  background-size: 220% 100%;
+  background-position: 160% 0;
+}
+
+/* Контурните бутони се напълват с цвят отляво */
+.fx-outline {
+  background-image: linear-gradient(var(--color-pine), var(--color-pine));
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: 0% 100%;
+}
+
+/* Подчертаване, което се изтегля от средата встрани */
+.fx-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 50% calc(100% - 1px);
+  background-size: 0% 2px;
+}
+
+/* Жълт маркер под думите в текст */
+.fx-ink {
+  background-image: linear-gradient(
+    rgba(244, 198, 63, 0.55),
+    rgba(244, 198, 63, 0.55)
+  );
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  background-size: 0% 45%;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .fx-pop:hover {
+    background-position: -60% 0;
+    box-shadow: 0 12px 24px -8px rgba(24, 24, 27, 0.45);
+  }
+  .fx-outline:hover {
+    background-size: 100% 100%;
+    color: #fffefe;
+    border-color: var(--color-pine);
+  }
+  .fx-link:hover {
+    background-size: 100% 2px;
+  }
+  .fx-ink:hover {
+    background-size: 100% 45%;
+  }
+  .fx-soft:hover {
+    box-shadow: 0 8px 18px -8px rgba(24, 24, 27, 0.35);
+  }
+  .fx-card:hover {
+    box-shadow: 0 22px 40px -18px rgba(24, 24, 27, 0.35);
+  }
+
+  /* Движението е само при мишка и при изключено „намалено движение“ */
+  @media (prefers-reduced-motion: no-preference) {
+    /* Бутоните само се повдигат и порастват — без наклон на една страна */
+    .fx-pop:hover {
+      transform: translateY(-3px) scale(1.03);
+    }
+    .fx-outline:hover,
+    .fx-soft:hover {
+      transform: translateY(-2px) scale(1.02);
+    }
+    .fx-tile:hover {
+      transform: translateY(-2px) scale(1.07);
+    }
+    .fx-card:hover {
+      transform: translateY(-6px) rotate(-0.7deg);
+    }
+    /* съседните карти се килват в другата посока — редът изглежда разчупен */
+    .fx-card:nth-of-type(even):hover {
+      transform: translateY(-6px) rotate(0.7deg);
+    }
+    .fx-icon:hover {
+      transform: scale(1.16);
+      animation: fx-wobble 0.55s ease-in-out;
+    }
+    .fx-link:hover {
+      transform: translateY(-1px);
+    }
+
+    /* Натискане — елементът се притиска надолу */
+    .fx-pop:active,
+    .fx-outline:active,
+    .fx-tile:active,
+    .fx-soft:active,
+    .fx-icon:active {
+      transform: translateY(1px) scale(0.97);
+      animation: none;
+    }
+  }
+
+  /*
+   * Админ панелът: всички бутони и линкове получават сдържан ефект наведнъж —
+   * там елементите са много и дребни, а работата е ежедневна.
+   */
+  .fx-admin :is(button, a, summary):not(:disabled) {
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease,
+      background-color 0.2s ease,
+      border-color 0.2s ease,
+      color 0.2s ease;
+  }
+  .fx-admin :is(button, a):not(.underline):not(:disabled):hover {
+    box-shadow: 0 8px 16px -8px rgba(24, 24, 27, 0.35);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .fx-admin :is(button, a):not(:disabled):hover {
+      transform: translateY(-2px);
+    }
+    .fx-admin :is(button, a):not(:disabled):active {
+      transform: translateY(1px) scale(0.98);
+    }
+  }
+}
+
+@keyframes fx-wobble {
+  0% {
+    rotate: 0deg;
+  }
+  30% {
+    rotate: -9deg;
+  }
+  60% {
+    rotate: 6deg;
+  }
+  85% {
+    rotate: -3deg;
+  }
+  100% {
+    rotate: 0deg;
+  }
 }

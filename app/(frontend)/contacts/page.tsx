@@ -125,7 +125,8 @@ export default async function ContactsPage() {
       />
 
       {/* ===== Мобилна версия ===== */}
-      <main className="overflow-x-clip bg-white pb-[85px] lg:hidden">
+      {/* на таблет мобилната версия се центрира в удобна за четене колона */}
+      <main className="overflow-x-clip bg-white pb-[85px] sm:mx-auto sm:max-w-[720px] lg:hidden">
         {/* Херо */}
         <section className="relative mt-[14px] pb-[28px]">
           <div className="absolute inset-0 rounded-[10px] bg-cream" />
@@ -242,7 +243,7 @@ export default async function ContactsPage() {
       </main>
 
       {/* ===== Десктоп версия ===== */}
-      <main className="hidden overflow-x-clip bg-[#f5f5f7] pb-[86px] lg:block">
+      <main className="fit-1512 hidden overflow-x-clip bg-[#f5f5f7] pb-[86px] lg:block">
         {/* Херо */}
         <section className="relative h-[851px]">
           <div className="absolute left-[31px] right-[32px] top-0 h-[851px] rounded-[10px] bg-cream" />

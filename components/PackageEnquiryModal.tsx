@@ -134,7 +134,7 @@ export default function PackageEnquiryModal({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-[20px] flex w-full cursor-pointer items-center justify-center rounded-[10px] bg-sun px-[24px] py-[11px] font-golos text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f]"
+        className="fx-pop mt-[20px] flex w-full cursor-pointer items-center justify-center rounded-[10px] bg-sun px-[24px] py-[11px] font-golos text-[15px] font-semibold leading-[20px] text-black/80 hover:bg-[#e0b32f]"
       >
         {ctaLabel}
       </button>
@@ -159,7 +159,7 @@ export default function PackageEnquiryModal({
                 type="button"
                 aria-label="Затвори"
                 onClick={close}
-                className="cursor-pointer font-golos text-[18px] leading-none text-[#a1a1aa] transition-colors hover:text-ink"
+                className="fx-icon cursor-pointer font-golos text-[18px] leading-none text-[#a1a1aa] hover:text-ink"
               >
                 ✕
               </button>
@@ -217,10 +217,10 @@ export default function PackageEnquiryModal({
                 <button
                   type="submit"
                   disabled={sending}
-                  className={`mt-[6px] flex items-center justify-center rounded-[10px] bg-sun px-[24px] py-[11px] font-golos text-[15px] font-semibold leading-[20px] text-black/80 transition-colors ${
+                  className={`mt-[6px] flex items-center justify-center rounded-[10px] bg-sun px-[24px] py-[11px] font-golos text-[15px] font-semibold leading-[20px] text-black/80 ${
                     sending
                       ? "cursor-not-allowed opacity-60"
-                      : "cursor-pointer hover:bg-[#e0b32f]"
+                      : "fx-pop cursor-pointer hover:bg-[#e0b32f]"
                   }`}
                 >
                   {sending ? "Изпращане…" : labels.submitLabel}

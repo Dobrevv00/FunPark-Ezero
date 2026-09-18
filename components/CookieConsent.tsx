@@ -64,10 +64,10 @@ export const useCookieConsent = () => useContext(CookieConsentContext);
 /* -------------------------------------------------------------------- стил */
 
 const btnBase =
-  "flex w-full items-center justify-center rounded-[10px] px-[20px] py-[10px] font-golos text-[14.5px] font-semibold leading-[20px] transition-colors cursor-pointer sm:w-auto";
-const btnPrimary = `${btnBase} bg-sun text-black/80 hover:bg-[#e0b32f]`;
-const btnNeutral = `${btnBase} bg-[rgba(161,161,170,0.18)] text-ink hover:bg-[rgba(161,161,170,0.3)]`;
-const btnGhost = `${btnBase} border border-forest/25 text-forest hover:bg-forest/5`;
+  "flex w-full items-center justify-center rounded-[10px] px-[20px] py-[10px] font-golos text-[14.5px] font-semibold leading-[20px] cursor-pointer sm:w-auto";
+const btnPrimary = `${btnBase} fx-pop bg-sun text-black/80 hover:bg-[#e0b32f]`;
+const btnNeutral = `${btnBase} fx-soft bg-[rgba(161,161,170,0.18)] text-ink hover:bg-[rgba(161,161,170,0.3)]`;
+const btnGhost = `${btnBase} fx-outline border border-forest/25 text-forest`;
 
 /* ------------------------------------------------------------------ toggle */
 
@@ -169,7 +169,7 @@ function CookieBanner({
             избора си по всяко време.{" "}
             <a
               href="/cookie-policy"
-              className="text-forest underline decoration-forest/35 underline-offset-[3px] transition-colors hover:decoration-forest"
+              className="fx-ink text-forest underline decoration-forest/35 underline-offset-[3px] hover:decoration-forest"
             >
               Политика за бисквитките
             </a>
@@ -235,7 +235,7 @@ function CookieSettingsModal({
             type="button"
             aria-label="Затвори"
             onClick={onClose}
-            className="cursor-pointer font-golos text-[18px] leading-none text-[#a1a1aa] transition-colors hover:text-ink"
+            className="fx-icon cursor-pointer font-golos text-[18px] leading-none text-[#a1a1aa] hover:text-ink"
           >
             ✕
           </button>

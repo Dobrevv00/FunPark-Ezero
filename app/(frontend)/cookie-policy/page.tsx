@@ -369,7 +369,7 @@ export default function CookiePolicyPage() {
           обработването на лични данни през формите на сайта вижте{" "}
           <Link
             href="/privacy-policy"
-            className="font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] transition-colors hover:decoration-forest"
+            className="fx-ink font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] hover:decoration-forest"
           >
             Политиката за поверителност
           </Link>

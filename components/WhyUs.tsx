@@ -84,7 +84,8 @@ export default function WhyUs({ content }: { content?: HomePage["whyUs"] }) {
           </span>
         </div>
 
-        <div className="relative mx-[16px] mt-[33px] h-[495px] overflow-hidden rounded-[5px]">
+        <div className="relative mx-[16px] mt-[33px] h-[495px] overflow-hidden rounded-[5px] sm:mx-auto sm:w-[calc(100%-32px)] sm:max-w-[720px]">
+
           <img
             src={imageMobile}
             alt="Въженото съоръжение на Fun Park Ezero"
@@ -112,13 +113,14 @@ export default function WhyUs({ content }: { content?: HomePage["whyUs"] }) {
                 </span>
               ))}
             </div>
-            <p className="mt-[12px] text-[12px] leading-[1.3] tracking-[0.12px] text-white">
+            <p className="mt-[12px] text-[12px] leading-[1.3] tracking-[0.12px] text-white sm:max-w-[520px] sm:text-[14px] sm:leading-[1.45]">
               {text}
             </p>
           </div>
         </div>
 
-        <div className="mx-auto mt-[67px] grid max-w-[370px] grid-cols-2 gap-x-[16px] gap-y-[11px] px-[16px]">
+        {/* на таблет четирите карти стават на един ред */}
+        <div className="mx-auto mt-[67px] grid max-w-[370px] grid-cols-2 gap-x-[16px] gap-y-[11px] px-[16px] sm:max-w-[760px] sm:grid-cols-4">
           {cards.map((card) => (
             <div
               key={card.title}

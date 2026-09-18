@@ -8,6 +8,8 @@ import { buildConfig } from "payload";
 import sharp from "sharp";
 
 import { Attractions } from "./collections/Attractions";
+import { CompetitionRegistrations } from "./collections/CompetitionRegistrations";
+import { Competitions } from "./collections/Competitions";
 import { Enquiries } from "./collections/Enquiries";
 import { Events } from "./collections/Events";
 import { Media } from "./collections/Media";
@@ -81,6 +83,8 @@ export default buildConfig({
     Attractions,
     Packages,
     Enquiries,
+    Competitions,
+    CompetitionRegistrations,
     // остава регистрирана само за да не се губят стари записи и таблицата;
     // всички форми вече пишат в „enquiries“
     PackageEnquiries,

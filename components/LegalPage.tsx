@@ -70,7 +70,7 @@ export function Contact({ href, children }: { href: string; children: string }) 
   return (
     <a
       href={href}
-      className="font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] transition-colors hover:decoration-forest"
+      className="fx-ink font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] hover:decoration-forest"
     >
       {children}
     </a>
@@ -160,7 +160,7 @@ export default async function LegalShell({
                   </span>
                   <a
                     href={`#${item.id}`}
-                    className="font-golos text-[13.5px] leading-[1.55] text-[#3f3f46] underline decoration-[#3f3f46]/25 underline-offset-[3px] transition-colors hover:text-forest hover:decoration-forest lg:text-[14.5px]"
+                    className="fx-ink font-golos text-[13.5px] leading-[1.55] text-[#3f3f46] underline decoration-[#3f3f46]/25 underline-offset-[3px] hover:text-forest hover:decoration-forest lg:text-[14.5px]"
                   >
                     {item.label}
                   </a>

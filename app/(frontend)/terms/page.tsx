@@ -41,7 +41,7 @@ const toc = [
 ];
 
 const legalLink =
-  "font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] transition-colors hover:decoration-forest";
+  "fx-ink font-semibold text-forest underline decoration-forest/35 underline-offset-[3px] hover:decoration-forest";
 
 export default function TermsPage() {
   return (

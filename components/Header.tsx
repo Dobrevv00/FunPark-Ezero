@@ -9,12 +9,26 @@ import { t } from "@/lib/cms";
 
 export { Logo };
 
+const COMPETITIONS_LINK = { label: "Записване за състезания", href: "/competitions" };
+
 const navLinks = [
   { label: "Начало", href: "/" },
   { label: "Събития", href: "/events" },
   { label: "Рожденни дни", href: "/birthdays" },
+  COMPETITIONS_LINK,
   { label: "Контакти", href: "/contacts" },
 ];
+
+/** Точките, които вече са в CMS — в техния ред, за резервни текстове */
+const cmsFallback = navLinks.filter((l) => l !== COMPETITIONS_LINK);
+
+/** Слага „Записване за състезания“ преди „Контакти“ (или накрая, ако няма „Контакти“) */
+const withCompetitions = (links: { label: string; href: string }[]) => {
+  const contacts = links.findIndex((l) => l.href === "/contacts");
+  return contacts === -1
+    ? [...links, COMPETITIONS_LINK]
+    : [...links.slice(0, contacts), COMPETITIONS_LINK, ...links.slice(contacts)];
+};
 
 const socials = [
   {
@@ -54,6 +68,7 @@ const searchIndex: SearchEntry[] = [
   { title: "Приключенски уикенд", desc: "Събитие · 19 юли", href: "/events", keywords: "приключение игри уикенд събитие" },
   { title: "DJ вечер край езерото", desc: "Събитие · 25 юли", href: "/events", keywords: "музика парти коктейли събитие" },
   { title: "Контакти", desc: "Свържете се с нас", href: "/contacts", keywords: "телефон имейл адрес въпрос запитване форма" },
+  { title: "Записване за състезания", desc: "Квалификация, полуфинал, финал и класирани", href: "/competitions", keywords: "състезание състезания записване квалификация полуфинал финал класирани класиране" },
   { title: "Ресторант", desc: "Вкусове от природата", href: "/", keywords: "храна меню езеро" },
   { title: "Въжено съоръжение", desc: "Маршрути с различни нива на трудност", href: "/", keywords: "атракция катерене въжен парк" },
 ];
@@ -89,7 +104,7 @@ function SearchResults({
           <button
             key={r.title}
             type="button"
-            className="cursor-pointer rounded-[8px] px-[12px] py-[8px] text-left transition-colors hover:bg-cream"
+            className="fx-soft cursor-pointer rounded-[8px] px-[12px] py-[8px] text-left hover:bg-cream"
             onClick={() => onPick(r)}
           >
             <span className="block text-[13.5px] font-semibold leading-[18px] text-ink">
@@ -117,13 +132,20 @@ export default function Header({
   socialLinks,
 }: HeaderProps = {}) {
   // менюто и текстът в търсачката идват от CMS; търсачката остава в кода
-  const navList =
+  const cmsNav =
     nav && nav.length > 0
       ? nav.map((n, i) => ({
-          label: t(n.label, navLinks[i]?.label ?? ""),
-          href: t(n.href, navLinks[i]?.href ?? "/"),
+          // резервните стойности следват реда в CMS (там още няма „Състезания“)
+          label: t(n.label, cmsFallback[i]?.label ?? ""),
+          href: t(n.href, cmsFallback[i]?.href ?? "/"),
         }))
       : navLinks;
+  // „Записване за състезания“ е винаги в менюто — предпоследна, точно преди
+  // „Контакти“, ако в CMS още няма точка към страницата (без дублиране, ако
+  // после бъде добавена там)
+  const navList = cmsNav.some((l) => l.href === COMPETITIONS_LINK.href)
+    ? cmsNav
+    : withCompetitions(cmsNav);
   const searchText = t(searchPlaceholder, "Потърси");
   const socialList = socials.map((s) => ({
     ...s,
@@ -159,7 +181,7 @@ export default function Header({
   };
 
   return (
-    <header className="bg-offwhite">
+    <header className="fit-1512 bg-offwhite">
       {/* Мобилна навигация */}
       <div className="px-[16px] pb-[12px] pt-[71px] lg:hidden">
         <div className="relative flex h-[49px] items-center justify-between">
@@ -237,7 +259,7 @@ export default function Header({
               key={link.label}
               href={link.href}
               onClick={() => setMenuOpen(false)}
-              className={`text-[20px] font-semibold leading-[26px] transition-colors hover:text-leaf ${
+              className={`fx-link text-[20px] font-semibold leading-[26px] hover:text-leaf ${
                 pathname === link.href ? "text-forest" : "text-[#444444]"
               }`}
             >
@@ -254,7 +276,7 @@ export default function Header({
               target={s.href === "#" ? undefined : "_blank"}
               rel={s.href === "#" ? undefined : "noopener noreferrer"}
               aria-label={s.alt}
-              className="transition-opacity hover:opacity-60"
+              className="fx-icon hover:opacity-80"
             >
               <img src={s.src} alt="" className={s.className} />
             </a>
@@ -271,7 +293,7 @@ export default function Header({
             <Link
               key={link.label}
               href={link.href}
-              className={`text-[16px] font-semibold leading-[20px] transition-colors hover:text-leaf ${
+              className={`fx-link text-[16px] font-semibold leading-[20px] hover:text-leaf ${
                 pathname === link.href ? "text-forest" : "text-[#444444]"
               }`}
             >
@@ -287,7 +309,7 @@ export default function Header({
               className={`flex h-[33px] w-[171px] items-center gap-[10px] rounded-[61px] border px-[14px] transition-all duration-200 ${
                 focused
                   ? "w-[220px] border-forest bg-white shadow-[0px_4px_14px_0px_rgba(0,0,0,0.1)]"
-                  : "border-black/18 bg-[rgba(217,217,217,0.44)] hover:border-black/40 hover:bg-[rgba(217,217,217,0.75)] hover:shadow-[0px_4px_14px_0px_rgba(0,0,0,0.08)]"
+                  : "fx-soft border-black/18 bg-[rgba(217,217,217,0.44)] hover:border-black/40 hover:bg-[rgba(217,217,217,0.75)]"
               }`}
             >
               <span className="relative size-[14px] shrink-0">
@@ -325,7 +347,7 @@ export default function Header({
                 target={s.href === "#" ? undefined : "_blank"}
                 rel={s.href === "#" ? undefined : "noopener noreferrer"}
                 aria-label={s.alt}
-                className="transition-opacity hover:opacity-60"
+                className="fx-icon hover:opacity-80"
               >
                 <img src={s.src} alt="" className={s.className} />
               </a>

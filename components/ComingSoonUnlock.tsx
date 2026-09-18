@@ -40,7 +40,7 @@ export default function ComingSoonUnlock() {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-[30px] cursor-pointer font-mulish text-[13px] font-semibold text-white/55 underline decoration-white/25 underline-offset-[4px] transition-colors hover:text-offwhite hover:decoration-sun"
+        className="fx-ink mt-[30px] cursor-pointer font-mulish text-[13px] font-semibold text-white/55 underline decoration-white/25 underline-offset-[4px] hover:text-offwhite hover:decoration-sun"
       >
         Вход с парола
       </button>
@@ -72,7 +72,7 @@ export default function ComingSoonUnlock() {
         <button
           type="submit"
           disabled={sending}
-          className="flex h-[46px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-sun px-[26px] font-golos text-[14px] font-semibold text-black/80 transition-colors hover:bg-[#e0b32f] disabled:cursor-not-allowed disabled:opacity-70"
+          className="fx-pop flex h-[46px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-sun px-[26px] font-golos text-[14px] font-semibold text-black/80 hover:bg-[#e0b32f] disabled:cursor-not-allowed disabled:opacity-70"
         >
           {sending ? "Проверка…" : "Влез"}
         </button>

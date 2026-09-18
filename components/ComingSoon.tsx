@@ -21,7 +21,7 @@ import type { SiteSetting } from "@/payload-types";
  * Ключът на режима. Изключване: смени на false, commit и push към main —
  * Vercel деплойва сам (~минута) и сайтът се показва нормално.
  */
-export const COMING_SOON_MODE = true;
+export const COMING_SOON_MODE = false;
 
 /**
  * Дали екранът да се покаже. Едно място за всички страници.
@@ -147,7 +147,7 @@ export default function ComingSoon({ settings }: { settings?: SiteSetting | null
             {phone && (
               <a
                 href={`tel:${phone.replace(/[^+\d]/g, "")}`}
-                className="flex items-center gap-[10px] rounded-full border border-white/15 bg-white/5 px-[22px] py-[12px] font-mulish text-[14px] font-semibold text-offwhite transition-colors duration-300 hover:border-sun/60 hover:bg-white/10"
+                className="fx-tile flex items-center gap-[10px] rounded-full border border-white/15 bg-white/5 px-[22px] py-[12px] font-mulish text-[14px] font-semibold text-offwhite hover:border-sun/60 hover:bg-white/10"
               >
                 <img src="/icons/call.svg" alt="" width={13} height={13} />
                 {phone}
@@ -156,7 +156,7 @@ export default function ComingSoon({ settings }: { settings?: SiteSetting | null
             {email && (
               <a
                 href={`mailto:${email}`}
-                className="flex items-center gap-[10px] rounded-full border border-white/15 bg-white/5 px-[22px] py-[12px] font-mulish text-[14px] font-semibold text-offwhite transition-colors duration-300 hover:border-sun/60 hover:bg-white/10"
+                className="fx-tile flex items-center gap-[10px] rounded-full border border-white/15 bg-white/5 px-[22px] py-[12px] font-mulish text-[14px] font-semibold text-offwhite hover:border-sun/60 hover:bg-white/10"
               >
                 <img src="/icons/mail.svg" alt="" width={15} height={12} />
                 {email}
@@ -176,7 +176,7 @@ export default function ComingSoon({ settings }: { settings?: SiteSetting | null
               target="_blank"
               rel="noopener noreferrer"
               aria-label={s.label}
-              className="flex size-[44px] items-center justify-center rounded-full border border-white/15 bg-white/5 transition-all duration-300 hover:scale-110 hover:border-sun/60 hover:bg-white/10"
+              className="fx-icon flex size-[44px] items-center justify-center rounded-full border border-white/15 bg-white/5 hover:border-sun/60 hover:bg-white/10"
             >
               <img src={s.src} alt="" className="size-[18px]" />
             </a>

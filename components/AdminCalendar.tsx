@@ -531,7 +531,7 @@ export default function AdminCalendar() {
         : "стандартни часове";
 
   return (
-    <section className="mb-[24px] rounded-[10px] bg-offwhite p-[24px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]">
+    <section className="mb-[24px] rounded-[10px] bg-offwhite p-[16px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)] sm:p-[24px]">
       <h2 className="font-golos text-[20px] font-bold text-ink">
         Календар
         <span className="ml-[10px] font-golos text-[14px] font-medium text-[#a1a1aa]">
@@ -544,7 +544,7 @@ export default function AdminCalendar() {
         резервациите.
       </p>
 
-      <div className="mt-[20px] grid gap-[24px] lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+      <div className="mt-[20px] grid grid-cols-1 gap-[24px] lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
         {/* Месечна решетка */}
         <div>
           <div className="flex items-center justify-between">
@@ -762,7 +762,7 @@ export default function AdminCalendar() {
                 setSlotError("");
               }}
               noValidate
-              className="flex items-end gap-[6px]"
+              className="flex flex-wrap items-end gap-[6px]"
             >
               <label className="flex flex-col gap-[2px]">
                 <span className="pl-[4px] text-[9px] font-semibold uppercase tracking-[1.5px] text-[#a1a1aa]">

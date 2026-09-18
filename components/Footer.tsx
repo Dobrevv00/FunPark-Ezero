@@ -133,7 +133,7 @@ function Socials({ className = "", items = socials }: { className?: string; item
           target="_blank"
           rel="noopener noreferrer"
           aria-label={s.alt}
-          className="transition-opacity hover:opacity-60"
+          className="fx-icon hover:opacity-80"
         >
           <img src={s.src} alt="" className={s.className} />
         </a>
@@ -165,7 +165,7 @@ function FooterLogo({
       href="/"
       aria-label="Към началото на страницата"
       title="Към началото на страницата"
-      className="group relative block transition-transform duration-300 ease-out hover:scale-[1.07] active:scale-95 active:duration-100"
+      className="fx-icon group relative block"
       style={{ width: ring, height: ring }}
     >
       <img
@@ -221,7 +221,7 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
   }));
 
   return (
-    <footer className="bg-forest">
+    <footer className="fit-1512 bg-forest">
       {/* Мобилен вариант */}
       <div className="flex min-h-[550px] flex-col items-center pb-[44px] pt-[30px] lg:hidden">
         <FooterLogo ring={70} inner={64} logoW={49.6} logoH={33.7} />
@@ -238,13 +238,13 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
               {col.items.map((item) => (
                 <li key={item.label}>
                   {item.href === BOOKING_HREF ? (
-                    <BookingLink className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white">
+                    <BookingLink className="fx-link whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 hover:text-white">
                       {item.label}
                     </BookingLink>
                   ) : (
                     <a
                       href={item.href}
-                      className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white"
+                      className="fx-link whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 hover:text-white"
                     >
                       {item.label}
                     </a>
@@ -254,7 +254,7 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
               {/* към legal линковете в колона „Информация“ */}
               {i === 1 && (
                 <li className="mt-[6px]">
-                  <CookieSettingsLink className="whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 transition-colors hover:text-white" />
+                  <CookieSettingsLink className="fx-link whitespace-nowrap text-[12.7px] leading-[15.278px] text-white/50 hover:text-white" />
                 </li>
               )}
             </ul>
@@ -307,13 +307,13 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
               {col.items.map((item) => (
                 <li key={item.label}>
                   {item.href === BOOKING_HREF ? (
-                    <BookingLink className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white">
+                    <BookingLink className="fx-link whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 hover:text-white">
                       {item.label}
                     </BookingLink>
                   ) : (
                     <a
                       href={item.href}
-                      className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white"
+                      className="fx-link whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 hover:text-white"
                     >
                       {item.label}
                     </a>
@@ -323,7 +323,7 @@ export default function Footer({ content, socialLinks }: FooterProps = {}) {
               {/* към legal линковете в колона „Информация“ */}
               {i === 1 && (
                 <li className="mt-[6px]">
-                  <CookieSettingsLink className="whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 transition-colors hover:text-white" />
+                  <CookieSettingsLink className="fx-link whitespace-nowrap text-[13px] leading-[19.5px] text-white/55 hover:text-white" />
                 </li>
               )}
             </ul>

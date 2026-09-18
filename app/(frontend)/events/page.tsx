@@ -4,9 +4,19 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ComingSoon, { comingSoonEnabled } from "@/components/ComingSoon";
 import Badge from "@/components/Badge";
+import BookingLink from "@/components/BookingLink";
+import CompetitionSection from "@/components/CompetitionSection";
 import YellowButton from "@/components/YellowButton";
 import { mediaUrl, t } from "@/lib/cms";
+import { socialUrl } from "@/lib/socials";
+
+/** Етикет на социална мрежа от мобилния футър → ключ за адреса */
+const networkOf = (label: string): "facebook" | "instagram" | "tiktok" => {
+  const l = label.toLowerCase();
+  return l.includes("insta") ? "instagram" : l.includes("tik") ? "tiktok" : "facebook";
+};
 import {
+  getCompetitions,
   getEvents,
   getEventsPage,
   getFooter,
@@ -193,7 +203,7 @@ function EventCard({ ev }: { ev: DesktopEvent }) {
       </YellowButton>
       <a
         href="#"
-        className="absolute left-[241px] top-[168px] flex w-[208px] items-center justify-center rounded-[10px] px-[24px] py-[10px] font-golos text-[15px] text-black transition-colors hover:bg-black/5"
+        className="fx-soft absolute left-[241px] top-[168px] flex w-[208px] items-center justify-center rounded-[10px] px-[24px] py-[10px] font-golos text-[15px] text-black hover:bg-black/5"
       >
         {ev.learnMoreLabel}
       </a>
@@ -256,15 +266,13 @@ function MobileEventCard({ ev }: { ev: MobileEvent }) {
         <p className="font-golos text-[13px] font-medium text-[#3f3f46]">{ev.meta}</p>
         <p className="font-golos text-[13.5px] leading-[1.5] text-[#3f3f46]">{ev.desc}</p>
         <div className="flex w-full items-center gap-[14px] pt-[4px]">
-          <a
-            href="#"
-            className="flex flex-1 items-center justify-center rounded-full bg-pine py-[12px] font-golos text-[14px] font-semibold leading-none text-offwhite transition-colors hover:bg-forest"
-          >
+          {/* отваря календара за резервация — както бутонът в десктоп картата */}
+          <BookingLink className="fx-pop flex flex-1 items-center justify-center rounded-full bg-pine py-[12px] font-golos text-[14px] font-semibold leading-none text-offwhite hover:bg-forest">
             {ev.bookLabel}
-          </a>
+          </BookingLink>
           <a
             href="#"
-            className="font-golos text-[14px] font-semibold text-pine transition-colors hover:text-forest"
+            className="fx-link font-golos text-[14px] font-semibold text-pine hover:text-forest"
           >
             {ev.learnMoreLabel}
           </a>
@@ -304,7 +312,7 @@ const toMobile = (e: Event, i: number) => ({
 });
 
 export default async function EventsPage() {
-  const [page, header, footer, settings, cmsDesktop, cmsMobile] =
+  const [page, header, footer, settings, cmsDesktop, cmsMobile, competitions] =
     await Promise.all([
       getEventsPage(),
       getHeader(),
@@ -312,6 +320,7 @@ export default async function EventsPage() {
       getSiteSettings(),
       getEvents("desktop"),
       getEvents("mobile"),
+      getCompetitions(),
     ]);
 
   // при включен режим „Очаквайте скоро“ страницата показва само екрана
@@ -446,7 +455,7 @@ export default async function EventsPage() {
         socialLinks={settings?.socials}
       />
 
-      <main className="overflow-x-clip">
+      <main className="fit-1512 overflow-x-clip">
         {/* ===== Мобилна версия ===== */}
         <div className="lg:hidden">
           {/* Херо */}
@@ -469,7 +478,7 @@ export default async function EventsPage() {
               <button
                 key={f.label}
                 type="button"
-                className={`shrink-0 cursor-pointer rounded-full px-[13px] py-[9px] font-golos text-[13px] font-semibold leading-none transition-colors ${
+                className={`fx-tile shrink-0 cursor-pointer rounded-full px-[13px] py-[9px] font-golos text-[13px] font-semibold leading-none ${
                   f.active
                     ? "bg-pine text-offwhite hover:bg-forest"
                     : "border border-[#a1a1aa] text-[#3f3f46] hover:bg-black/5"
@@ -481,7 +490,8 @@ export default async function EventsPage() {
           </div>
 
           {/* Събития */}
-          <div className="flex flex-col gap-[20px] px-[20px] pb-[48px] pt-[16px]">
+          {/* на телефон — една колона; на таблет — две */}
+          <div className="flex flex-col gap-[20px] px-[20px] pb-[48px] pt-[16px] sm:grid sm:grid-cols-2">
             {mobileEventList.map((ev) => (
               <MobileEventCard key={ev.title} ev={ev} />
             ))}
@@ -504,12 +514,15 @@ export default async function EventsPage() {
               </p>
               <button
                 type="button"
-                className="cursor-pointer rounded-full border-[1.5px] border-pine px-[24px] py-[11px] font-golos text-[14px] font-semibold leading-none text-pine transition-colors hover:bg-pine hover:text-offwhite"
+                className="fx-outline cursor-pointer rounded-full border-[1.5px] border-pine px-[24px] py-[11px] font-golos text-[14px] font-semibold leading-none text-pine"
               >
                 {mob.empty.ctaLabel}
               </button>
             </div>
           </div>
+
+          {/* Записване за състезание */}
+          <CompetitionSection mobile competitions={competitions} />
 
           {/* Бюлетин */}
           <section className="px-[20px] pb-[64px]">
@@ -520,7 +533,7 @@ export default async function EventsPage() {
               <p className="font-golos text-[14px] leading-[1.5] text-[rgba(255,254,254,0.8)]">
                 {mob.news.text}
               </p>
-              <form className="flex flex-col gap-[16px]">
+              <form className="flex flex-col gap-[16px] sm:max-w-[560px] sm:flex-row">
                 <input
                   type="email"
                   placeholder={mob.news.placeholder}
@@ -528,7 +541,7 @@ export default async function EventsPage() {
                 />
                 <button
                   type="submit"
-                  className="w-full cursor-pointer rounded-full bg-sun py-[15px] font-golos text-[14px] font-semibold leading-none text-pine transition-colors hover:bg-[#e0b32f]"
+                  className="fx-pop w-full shrink-0 cursor-pointer rounded-full bg-sun py-[15px] font-golos text-[14px] font-semibold leading-none text-pine hover:bg-[#e0b32f] sm:w-auto sm:px-[28px]"
                 >
                   {mob.news.ctaLabel}
                 </button>
@@ -558,7 +571,7 @@ export default async function EventsPage() {
                 <Link
                   key={l.label}
                   href={l.href}
-                  className="font-golos text-[15px] font-semibold text-offwhite transition-opacity hover:opacity-70"
+                  className="fx-link font-golos text-[15px] font-semibold text-offwhite hover:opacity-80"
                 >
                   {l.label}
                 </Link>
@@ -568,8 +581,11 @@ export default async function EventsPage() {
               {mob.footer.socials.map((s) => (
                 <a
                   key={s}
-                  href="#"
-                  className="rounded-full bg-[rgba(255,254,254,0.1)] px-[14px] py-[8px] font-golos text-[12px] font-semibold text-offwhite transition-colors hover:bg-[rgba(255,254,254,0.2)]"
+                  // адресът идва от настройките на сайта, иначе от lib/socials.ts
+                  href={socialUrl(networkOf(s), settings?.socials)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="fx-tile rounded-full bg-[rgba(255,254,254,0.1)] px-[14px] py-[8px] font-golos text-[12px] font-semibold text-offwhite hover:bg-[rgba(255,254,254,0.2)]"
                 >
                   {s}
                 </a>
@@ -646,7 +662,7 @@ export default async function EventsPage() {
               <button
                 key={f.label}
                 type="button"
-                className={`flex cursor-pointer items-center justify-center rounded-full px-[36px] py-[9px] text-[15.338px] leading-[1.3] tracking-[0.1534px] transition-colors ${
+                className={`fx-tile flex cursor-pointer items-center justify-center rounded-full px-[36px] py-[9px] text-[15.338px] leading-[1.3] tracking-[0.1534px] ${
                   f.active
                     ? "bg-forest text-white hover:bg-pine"
                     : "border border-black text-ink hover:bg-black/5"
@@ -690,6 +706,9 @@ export default async function EventsPage() {
             </div>
           </div>
 
+          {/* Записване за състезание */}
+          <CompetitionSection mobile={false} competitions={competitions} />
+
           {/* Бюлетин */}
           <section className="mx-auto mb-[79px] mt-[73px] max-w-[1512px] pl-[31px] pr-[33px]">
             <div className="relative h-[295.229px] rounded-[10px] bg-forest">
@@ -708,7 +727,7 @@ export default async function EventsPage() {
                 />
                 <button
                   type="submit"
-                  className="ml-[4px] h-[45px] w-[177px] cursor-pointer rounded-[10px] bg-sun text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f]"
+                  className="fx-pop ml-[4px] h-[45px] w-[177px] cursor-pointer rounded-[10px] bg-sun text-[15px] font-semibold leading-[20px] text-black/80 hover:bg-[#e0b32f]"
                 >
                   {desk.news.ctaLabel}
                 </button>

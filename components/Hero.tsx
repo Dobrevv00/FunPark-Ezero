@@ -58,7 +58,11 @@ export default function Hero({ content }: { content?: HomePage["hero"] }) {
         <p className="absolute inset-x-[16px] top-[506px] mx-auto max-w-[375px] text-center font-golos text-[14px] font-semibold leading-[1.44] text-[rgba(255,254,254,0.92)]">
           {subtitle}
         </p>
-        <YellowButton booking className="absolute left-[16px] right-[16px] top-[575px]">
+        {/* на телефон е на цяла ширина; на таблет — центриран бутон */}
+        <YellowButton
+          booking
+          className="absolute left-[16px] right-[16px] top-[575px] sm:left-1/2 sm:right-auto sm:w-[360px] sm:-translate-x-1/2"
+        >
           {ctaLabel}
         </YellowButton>
       </div>

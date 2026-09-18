@@ -97,7 +97,7 @@ function Calendar({ mobile }: { mobile: boolean }) {
                   {selectable ? (
                     <button
                       type="button"
-                      className={`${shape} cursor-pointer transition-colors hover:bg-black/5`}
+                      className={`${shape} fx-tile cursor-pointer hover:bg-black/5`}
                       onClick={() => open({ y, m, d: cellDay.day })}
                     >
                       {cellDay.day}

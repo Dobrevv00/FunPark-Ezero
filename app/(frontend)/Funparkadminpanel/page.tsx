@@ -41,7 +41,13 @@ import {
   type SeatCounts,
   type SeatKey,
 } from "@/lib/bookingStore";
-import { ADMIN_PASS, ADMIN_USER, AUTH_KEY, isAdminAuthed } from "@/lib/adminAuth";
+import { AUTH_KEY } from "@/lib/adminAuth";
+import {
+  checkAdminSession,
+  loginAdmin,
+  logoutAdmin,
+} from "@/lib/actions/adminAuth";
+import CompetitionsAdmin from "@/components/CompetitionsAdmin";
 import { Logo } from "@/components/Logo";
 import AdminCalendar from "@/components/AdminCalendar";
 import { CategoriesSection } from "@/components/AdminSetup";
@@ -1112,7 +1118,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
     );
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] pb-[60px]">
+    // fx-admin дава сдържан ховър ефект на всички бутони и линкове в панела
+    <div className="fx-admin min-h-screen bg-[#f5f5f7] pb-[60px]">
       {/* Горна лента */}
       <header className="bg-forest">
         <div className="mx-auto flex h-[64px] max-w-[1100px] items-center justify-between px-[16px]">
@@ -1134,6 +1141,8 @@ function AdminPanel({ onLogout }: { onLogout: () => void }) {
         <AdminCalendar />
         <CategoriesSection />
         <PricesSection />
+        {/* Състезанията са отделно от календара — записват се в Payload */}
+        <CompetitionsAdmin />
       </main>
 
       {/* Попъп за потвърждение */}
@@ -1187,10 +1196,16 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   const [user, setUser] = useState("");
   const [pass, setPass] = useState("");
   const [error, setError] = useState(false);
+  const [sending, setSending] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  // името и паролата се проверяват на сървъра — не са в кода на страницата
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (user === ADMIN_USER && pass === ADMIN_PASS) {
+    if (sending) return;
+    setSending(true);
+    const res = await loginAdmin(user, pass);
+    setSending(false);
+    if (res.ok) {
       sessionStorage.setItem(AUTH_KEY, "1");
       onSuccess();
     } else {
@@ -1199,7 +1214,7 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#f5f5f7] px-[16px]">
+    <div className="fx-admin flex min-h-screen items-center justify-center bg-[#f5f5f7] px-[16px]">
       <form
         onSubmit={submit}
         className="relative flex w-[400px] max-w-full flex-col items-center rounded-[10px] bg-offwhite px-[32px] py-[40px] shadow-[0px_11.39px_34.17px_0px_rgba(0,0,0,0.07)]"
@@ -1256,9 +1271,10 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
 
         <button
           type="submit"
-          className="mt-[24px] w-full cursor-pointer rounded-[10px] bg-sun py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f]"
+          disabled={sending}
+          className="mt-[24px] w-full cursor-pointer rounded-[10px] bg-sun py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors hover:bg-[#e0b32f] disabled:cursor-not-allowed disabled:opacity-60"
         >
-          Вход
+          {sending ? "Проверка…" : "Вход"}
         </button>
 
         <Link
@@ -1277,17 +1293,29 @@ export default function AdminPage() {
   const [ready, setReady] = useState(false);
   const router = useRouter();
 
+  // входът е валиден само ако сървърът потвърди бисквитката
   useEffect(() => {
-    setAuthed(isAdminAuthed());
-    setReady(true);
+    let alive = true;
+    checkAdminSession()
+      .then((ok) => {
+        if (!alive) return;
+        if (!ok) sessionStorage.removeItem(AUTH_KEY);
+        setAuthed(ok);
+      })
+      .catch(() => alive && setAuthed(false))
+      .finally(() => alive && setReady(true));
+    return () => {
+      alive = false;
+    };
   }, []);
 
   if (!ready) return null;
 
   return authed ? (
     <AdminPanel
-      onLogout={() => {
+      onLogout={async () => {
         sessionStorage.removeItem(AUTH_KEY);
+        await logoutAdmin();
         router.replace("/");
       }}
     />

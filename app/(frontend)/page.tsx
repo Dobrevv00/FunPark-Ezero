@@ -36,7 +36,7 @@ export default async function Home() {
         searchPlaceholder={header?.searchPlaceholder}
         socialLinks={settings?.socials}
       />
-      <main className="overflow-x-clip">
+      <main className="fit-1512 overflow-x-clip">
         <Hero content={home?.hero} />
         <section className="bg-cream pb-[157px] lg:pb-[151px]">
           <div className="relative -mt-[27px] lg:-mt-[35px]">

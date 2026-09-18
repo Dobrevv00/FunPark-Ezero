@@ -195,11 +195,11 @@ export default function ContactForm({
       <button
         type="submit"
         disabled={sending}
-        className={`flex items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 transition-colors ${
-          sending ? "cursor-not-allowed opacity-60" : "hover:bg-[#e0b32f]"
+        className={`flex items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] text-[15px] font-semibold leading-[20px] text-black/80 ${
+          sending ? "cursor-not-allowed opacity-60" : "fx-pop hover:bg-[#e0b32f]"
         } ${
           mobile
-            ? "mt-[27px] h-[40px] w-full"
+            ? "mt-[27px] h-[40px] w-full sm:w-[300px] sm:self-center"
             : "mt-[8px] w-[300px] max-w-full self-center"
         }`}
       >

@@ -19,7 +19,7 @@ export default function YellowButton({
   external?: boolean;
 }) {
   const { open } = useBookingModal();
-  const classes = `flex items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] transition-colors hover:bg-[#e0b32f] ${className}`;
+  const classes = `fx-pop flex items-center justify-center rounded-[10px] bg-sun px-[24px] py-[10px] hover:bg-[#e0b32f] ${className}`;
   const label = (
     <span className="whitespace-nowrap text-center text-[15px] font-semibold leading-[20px] text-black/80">
       {children}
