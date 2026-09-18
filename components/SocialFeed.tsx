@@ -5,11 +5,31 @@ import { socialUrl } from "@/lib/socials";
 import type { InstagramReel } from "@/lib/instagram.server";
 import type { HomePage } from "@/payload-types";
 
-const videos = [
-  "/images/tiktok-1.jpg",
-  "/images/tiktok-2.jpg",
-  "/images/tiktok-3.jpg",
-  "/images/tiktok-4.jpg",
+/**
+ * Най-новите рийлове от @fun_park_ezero — статичен снапшот (18.09.2026).
+ * Тъмбнейлите са реалните корици от Instagram (og-вариантите, затова носят
+ * вграден play бутон в центъра — бутонът на картата го покрива). Обновяване:
+ * нови снимки в public/images + нови линкове тук; снимките могат да се сменят
+ * и от CMS (Начална → „Последвайте ни“). Ако някой ден се добави
+ * INSTAGRAM_ACCESS_TOKEN, живият фийд замества снапшота автоматично.
+ */
+const reelsStatic = [
+  {
+    image: "/images/ig-reel-1.jpg",
+    href: "https://www.instagram.com/fun_park_ezero/reel/DbqieBVFv_w/",
+  },
+  {
+    image: "/images/ig-reel-2.jpg",
+    href: "https://www.instagram.com/fun_park_ezero/reel/DbVnzA9lSAw/",
+  },
+  {
+    image: "/images/ig-reel-3.jpg",
+    href: "https://www.instagram.com/fun_park_ezero/reel/DbHHBGgqfBz/",
+  },
+  {
+    image: "/images/ig-reel-4.jpg",
+    href: "https://www.instagram.com/fun_park_ezero/reel/Da7ezo6FKuT/",
+  },
 ];
 
 const socials = [
@@ -27,7 +47,7 @@ const socials = [
   },
 ];
 
-function TikTokCard({
+function StaticReelCard({
   src,
   index,
   mobile,
@@ -38,7 +58,7 @@ function TikTokCard({
   index: number;
   mobile: boolean;
   handle: string;
-  /** Профилът в TikTok — картата се отваря в нов прозорец */
+  /** Публикацията в Instagram — картата се отваря в нов прозорец */
   href: string;
 }) {
   return (
@@ -55,20 +75,21 @@ function TikTokCard({
     >
       <img
         src={src}
-        alt={`TikTok видео ${index + 1} от Fun Park Ezero`}
+        alt={`Reel ${index + 1} от Fun Park Ezero в Instagram`}
         className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.06]"
       />
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-[rgba(0,0,0,0)] to-[60%] transition-opacity duration-300 group-hover:opacity-80" />
+      {/* центриран и малко по-голям от вградения в og-кориците, за да го покрие */}
       <span
-        className={`absolute left-1/2 flex -translate-x-1/2 items-center justify-center transition-transform duration-300 ease-out group-hover:scale-110 ${
-          mobile ? "top-[217px] size-[49.3px]" : "top-[269px] size-[61px]"
+        className={`absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center transition-transform duration-300 ease-out group-hover:scale-110 ${
+          mobile ? "size-[55px]" : "size-[68px]"
         }`}
       >
         <img src="/icons/play-circle.svg" alt="" className="absolute inset-0 size-full" />
         <img
           src="/icons/play-arrow.svg"
           alt=""
-          className={`relative ${mobile ? "ml-[2px] h-[16px] w-[14px]" : "ml-[3px] h-[20px] w-[17.5px]"}`}
+          className={`relative ${mobile ? "ml-[2px] h-[17px] w-[15px]" : "ml-[3px] h-[21px] w-[18.5px]"}`}
         />
       </span>
       <span
@@ -77,9 +98,9 @@ function TikTokCard({
         }`}
       >
         <img
-          src="/icons/tiktok.svg"
+          src="/icons/instagram-light.svg"
           alt=""
-          className={mobile ? "h-[12px] w-[11px]" : "h-[14px] w-[13px]"}
+          className={mobile ? "size-[12px]" : "size-[14px]"}
         />
         <span
           className={`font-semibold text-white ${
@@ -100,27 +121,25 @@ export default function SocialFeed({
 }: {
   content?: HomePage["socialFeed"];
   socialLinks?: { network?: string | null; url?: string | null }[] | null;
-  /** Най-новите Reels от Instagram; празно = статичните TikTok карти */
+  /** Живи Reels от Instagram API (с токен); празно = статичният снапшот */
   reels?: InstagramReel[];
 }) {
   const title = t(content?.title, "Последвайте ни");
   const text = t(
     content?.text,
-    "Вижте най-добрите моменти от нашите гости @funparkezero",
+    "Вижте най-добрите моменти от нашите гости @fun_park_ezero",
   );
-  // има ли живи рийлове, секцията става Instagram: картите пускат видеата на
-  // място, а бутонът и профилът сочат Instagram (надписът от CMS е за TikTok)
+  // секцията е Instagram: профилът и бутонът идват от настройките, а не от
+  // CMS полетата за TikTok (те се връщат, ако секцията пак стане TikTok)
   const hasReels = (reels?.length ?? 0) > 0;
   const instagram = socialUrl("instagram", socialLinks);
-  const igHandle = `@${instagram.match(/instagram\.com\/([^/?#]+)/)?.[1] ?? "fun_park_ezero"}`;
-  const ctaLabel = hasReels
-    ? "Виж в Instagram"
-    : t(content?.ctaLabel, "Виж в TikTok");
-  // бутонът води към профила — от настройките, иначе от кода
-  const tiktok = socialUrl("tiktok", socialLinks);
-  const ctaHref = hasReels ? instagram : tiktok;
-  const handle = hasReels ? igHandle : t(content?.handle, "@funparkzero");
-  const clips = videos.map((src, i) => mediaUrl(content?.videos?.[i]?.image, src));
+  const handle = `@${instagram.match(/instagram\.com\/([^/?#]+)/)?.[1] ?? "fun_park_ezero"}`;
+  const ctaLabel = "Виж в Instagram";
+  // снимките на снапшота могат да се сменят от CMS; линковете са в кода
+  const cards = reelsStatic.map((r, i) => ({
+    href: r.href,
+    image: mediaUrl(content?.videos?.[i]?.image, r.image),
+  }));
   // линковете идват от настройките на сайта; иконите остават в кода
   const links = socials.map((s) => ({
     ...s,
@@ -139,7 +158,7 @@ export default function SocialFeed({
           {text}
         </p>
         <YellowButton
-          href={ctaHref}
+          href={instagram}
           external
           className="absolute left-[16px] right-[16px] top-[179px] sm:right-auto sm:w-[320px]"
         >
@@ -149,8 +168,15 @@ export default function SocialFeed({
           {hasReels ? (
             <ReelsRow reels={reels!} mobile handle={handle} />
           ) : (
-            clips.map((src, i) => (
-              <TikTokCard key={src} src={src} index={i} mobile handle={handle} href={tiktok} />
+            cards.map((card, i) => (
+              <StaticReelCard
+                key={card.href}
+                src={card.image}
+                index={i}
+                mobile
+                handle={handle}
+                href={card.href}
+              />
             ))
           )}
         </div>
@@ -166,7 +192,7 @@ export default function SocialFeed({
         </p>
 
         <YellowButton
-          href={ctaHref}
+          href={instagram}
           external
           className="absolute left-[calc(75%+61px)] top-[145px] w-[259px]"
         >
@@ -192,14 +218,14 @@ export default function SocialFeed({
           {hasReels ? (
             <ReelsRow reels={reels!} mobile={false} handle={handle} />
           ) : (
-            clips.map((src, i) => (
-              <TikTokCard
-                key={src}
-                src={src}
+            cards.map((card, i) => (
+              <StaticReelCard
+                key={card.href}
+                src={card.image}
                 index={i}
                 mobile={false}
                 handle={handle}
-                href={tiktok}
+                href={card.href}
               />
             ))
           )}
